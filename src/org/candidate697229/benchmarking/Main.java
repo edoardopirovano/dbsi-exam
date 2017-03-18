@@ -10,13 +10,13 @@ import java.util.List;
 
 public class Main {
     private static final int NUM_OF_SCALES = 20;
-    private static final int TIMEOUT_SECONDS = 240;
+    private static final int TIMEOUT_SECONDS = 2400;
     private static final int REPEATS_PER_SCALE = 4;
 
     public static void main(String[] args) {
         System.out.println("Reading in data and creating Naive database to benchmark against");
         ArrayList<Database> databases = new ArrayList<>();
-        for (int i = 0; i <= NUM_OF_SCALES; ++i) {
+        for (int i = 1; i <= NUM_OF_SCALES; ++i) {
             databases.add(Database.makeFromDirectory("housing/housing-" + i));
             System.out.println("... Read in database number " + i);
             if (!new File("housing/housing-" + i + ".db").exists()) {
@@ -30,10 +30,11 @@ public class Main {
         experiment:
         for (QueryRunner runner : queryRunners) {
             long experimentStart = System.currentTimeMillis();
-            for (int i = 0; i < NUM_OF_SCALES; ++i) {
-                runner.runQueryAll(i);
-                runner.runQueryOne(i);
+            for (int i = 1; i <= NUM_OF_SCALES; ++i) {
                 GCAndWait();
+                runner.runQueryAll(i);
+                GCAndWait();
+                runner.runQueryOne(i);
                 long[] allAggregatesTimes = new long[REPEATS_PER_SCALE];
                 long[] oneAggregateTimes = new long[REPEATS_PER_SCALE];
                 for (int j = 0; j < REPEATS_PER_SCALE; ++j) {
@@ -44,8 +45,8 @@ public class Main {
                     if ((System.currentTimeMillis() - experimentStart) > (TIMEOUT_SECONDS * 1000L))
                         break experiment;
                 }
-                System.out.println("TIME\t" + queryRunners.getClass().getName() + "\tAll\t" + average(allAggregatesTimes));
-                System.out.println("TIME\t" + queryRunners.getClass().getName() + "\tOne\t" + average(oneAggregateTimes));
+                System.out.println("TIME\t" + runner.getClass().getSimpleName() + "\t" + i + "\tAll\t" + average(allAggregatesTimes));
+                System.out.println("TIME\t" + runner.getClass().getSimpleName() + "\t" + i + "\tOne\t" + average(oneAggregateTimes));
             }
         }
     }
@@ -59,13 +60,16 @@ public class Main {
 
     /**
      * This method triggers garbage collection and finalisation then waits for a short time for these to complete. This
-     * is executed between runs to ensure each run starts with the heap clear of any garbage, giving fairer timings.
+     * is executed between runs to attempt to ensure each run starts with the heap clear of any garbage, giving fairer timings.
+     *
+     * It is worth noting that these calls do not actually guarantee that garbage collection will occur, since the JVM
+     * can still decide to not perform it. However, it is good practice to execute these calls anyway in profiling code.
      */
     private static void GCAndWait() {
         System.gc();
         System.runFinalization();
         try {
-            Thread.sleep(1000);
+            Thread.sleep(200);
         } catch (InterruptedException e) {
             throw new InternalError(e);
         }

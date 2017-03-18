@@ -4,8 +4,10 @@ import java.util.Stack;
 
 /**
  * This class is loosely based on code obtained from http://algs4.cs.princeton.edu/home/
- * with many modifications for our use case (in particular, a lot of unnecessary code for
- * deletions was removed, and all the iteration code was added).
+ * with many modifications for our use case/ In particular:
+ *  - Unused for deletions removed.
+ *  - Adapted insertion to allow duplicate keys.
+ *  - Introduced iteration methods.
  */
 public class BTree<Key extends Comparable<Key>, Value> {
     // max children per B-tree node = M-1
