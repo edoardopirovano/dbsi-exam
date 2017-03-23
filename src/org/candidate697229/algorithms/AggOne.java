@@ -11,10 +11,10 @@ public class AggOne {
     private long[] result;
 
     public AggOne(Database database) {
-        ImmutablePair<List<int[]>, List<int[]>> conditionsAndDistinct = database.getConditionsAndDistinct();
-        trieJoin = new TrieJoin(database, conditionsAndDistinct.getFirst());
+        ImmutablePair<List<int[]>, List<int[]>> joinConditionsAndAllPairs = database.getJoinConditionsAndAllPairs();
+        trieJoin = new TrieJoin(database, joinConditionsAndAllPairs.getFirst());
         trieJoin.init();
-        distinctPairs = conditionsAndDistinct.getSecond();
+        distinctPairs = joinConditionsAndAllPairs.getSecond();
     }
 
     public long[] computeAllAggregatesOfNaturalJoin() {

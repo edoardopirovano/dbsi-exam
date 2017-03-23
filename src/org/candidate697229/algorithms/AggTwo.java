@@ -16,7 +16,7 @@ public class AggTwo {
 
     public AggTwo(Database database) {
         this.database = computeSumDatabase(database);
-        ImmutablePair<List<int[]>, List<int[]>> conditionAndInstructions = database.getConditionsAndInstructions();
+        ImmutablePair<List<int[]>, List<int[]>> conditionAndInstructions = database.getConditionsAndInstructionsForSummedDatabase();
         trieJoin = new TrieJoin(this.database, conditionAndInstructions.getFirst());
         trieJoin.init();
         instructions = conditionAndInstructions.getSecond();

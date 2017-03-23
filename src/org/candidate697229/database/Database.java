@@ -59,7 +59,7 @@ public class Database {
         return attributePairs;
     }
 
-    public ImmutablePair<List<int[]>, List<int[]>> getConditionsAndDistinct() {
+    public ImmutablePair<List<int[]>, List<int[]>> getJoinConditionsAndAllPairs() {
         HashMap<String, List<int[]>> seenWhere = findAttributePositions();
         List<int[]> distinctAttributes = seenWhere.values().stream().map(x -> x.get(0)).collect(Collectors.toList());
         List<int[]> joinConditions = makeJoinCondition(seenWhere);
@@ -102,25 +102,25 @@ public class Database {
         return seenWhere;
     }
 
-    public ImmutablePair<List<int[]>, List<int[]>> getConditionsAndInstructions() {
-        ImmutablePair<List<int[]>, List<int[]>> conditionsAndDistinct = getConditionsAndDistinct();
-        List<int[]> distinctPairs = conditionsAndDistinct.getSecond();
-        List<int[]> distinct = new ArrayList<>();
+    public ImmutablePair<List<int[]>, List<int[]>> getConditionsAndInstructionsForSummedDatabase() {
+        ImmutablePair<List<int[]>, List<int[]>> joinConditionAndPairs = getJoinConditionsAndAllPairs();
+        List<int[]> distinctPairs = joinConditionAndPairs.getSecond();
+        List<int[]> instructions = new ArrayList<>();
 
         for (int[] pair : distinctPairs) {
             int[] instruction;
             if (pair[0] == pair[2])
                 instruction = new int[]{0, pair[0], 2 + tables.get(pair[0]).getAttributes().size() +
-                        calculate(pair[1], pair[0]) + (pair[3] - pair[1])};
+                        calculatePosition(pair[1], pair[0]) + (pair[3] - pair[1])};
             else
                 instruction = new int[]{1, pair[0], pair[1] + 2, pair[2], pair[3] + 2};
-            distinct.add(instruction);
+            instructions.add(instruction);
         }
 
-        return new ImmutablePair<>(conditionsAndDistinct.getFirst(), distinct);
+        return new ImmutablePair<>(joinConditionAndPairs.getFirst(), instructions);
     }
 
-    private int calculate(int k, int table) {
+    private int calculatePosition(int k, int table) {
         int result = 0;
         for (int i = 0; i < k; ++i)
             result += (tables.get(table).getAttributes().size() - i);
