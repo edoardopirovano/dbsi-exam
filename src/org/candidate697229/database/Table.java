@@ -11,7 +11,7 @@ public class Table {
     private List<String> attributes;
     private long[][] tuples;
 
-    Table(String name, List<String> attributes) {
+    public Table(String name, List<String> attributes) {
         this.name = name;
         this.attributes = attributes;
     }
@@ -45,5 +45,9 @@ public class Table {
 
     public long[][] getTuples() {
         return tuples;
+    }
+
+    public void putTuples(long[][] tuples) {
+        this.tuples = tuples;
     }
 }

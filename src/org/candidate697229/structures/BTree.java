@@ -10,9 +10,7 @@ import java.util.Stack;
  *  - Introduced iteration methods.
  */
 public class BTree<Key extends Comparable<Key>, Value> {
-    // max children per B-tree node = M-1
-    // (must be even and greater than 2)
-    private static final int M = 64;
+    private static final int M = 4;
 
     private Node root;       // root of the B-tree
     private int height;      // height of the B-tree

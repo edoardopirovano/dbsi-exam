@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 public class Database {
     private ArrayList<Table> tables;
 
-    private Database(ArrayList<Table> tables) {
+    public Database(ArrayList<Table> tables) {
         this.tables = tables;
     }
 
@@ -60,9 +60,34 @@ public class Database {
     }
 
     public ImmutablePair<List<int[]>, List<int[]>> getConditionsAndDistinct() {
-        List<int[]> joinConditions = new ArrayList<>();
-        List<int[]> distinctAttributes = new ArrayList<>();
+        HashMap<String, List<int[]>> seenWhere = findAttributePositions();
+        List<int[]> distinctAttributes = seenWhere.values().stream().map(x -> x.get(0)).collect(Collectors.toList());
+        List<int[]> joinConditions = makeJoinCondition(seenWhere);
 
+        List<int[]> distinctPairs = new ArrayList<>();
+        for (int j = 0; j < distinctAttributes.size(); ++j) {
+            int[] firstAttribute = distinctAttributes.get(j);
+            for (int k = j; k < distinctAttributes.size(); ++k) {
+                int[] secondAttribute = distinctAttributes.get(k);
+                distinctPairs.add(new int[]{firstAttribute[0], firstAttribute[1],
+                            secondAttribute[0], secondAttribute[1]});
+            }
+        }
+
+        return new ImmutablePair<>(joinConditions, distinctPairs);
+    }
+
+    private List<int[]> makeJoinCondition(HashMap<String, List<int[]>> seenWhere) {
+        List<int[]> joinConditions = new ArrayList<>();
+        seenWhere.values().stream().filter(positions -> positions.size() > 1).forEach(positions -> {
+            int[] first = positions.remove(0);
+            for (int[] other : positions)
+                joinConditions.add(new int[]{first[0], first[1], other[0], other[1]});
+        });
+        return joinConditions;
+    }
+
+    private HashMap<String, List<int[]>> findAttributePositions() {
         HashMap<String, List<int[]>> seenWhere = new LinkedHashMap<>();
         for (int i = 0; i < tables.size(); ++i) {
             List<String> attributes = tables.get(i).getAttributes();
@@ -71,17 +96,34 @@ public class Database {
                     seenWhere.get(attributes.get(j)).add(new int[]{i, j});
                 else {
                     seenWhere.put(attributes.get(j), new LinkedList<>(Collections.singleton(new int[]{i, j})));
-                    distinctAttributes.add(new int[]{i, j});
                 }
             }
         }
+        return seenWhere;
+    }
 
-        seenWhere.values().stream().filter(positions -> positions.size() > 1).forEach(positions -> {
-            int[] first = positions.remove(0);
-            for (int[] other : positions)
-                joinConditions.add(new int[]{first[0], first[1], other[0], other[1]});
-        });
+    public ImmutablePair<List<int[]>, List<int[]>> getConditionsAndInstructions() {
+        ImmutablePair<List<int[]>, List<int[]>> conditionsAndDistinct = getConditionsAndDistinct();
+        List<int[]> distinctPairs = conditionsAndDistinct.getSecond();
+        List<int[]> distinct = new ArrayList<>();
 
-        return new ImmutablePair<>(joinConditions, distinctAttributes);
+        for (int[] pair : distinctPairs) {
+            int[] instruction;
+            if (pair[0] == pair[2])
+                instruction = new int[]{0, pair[0], 2 + tables.get(pair[0]).getAttributes().size() +
+                        calculate(pair[1], pair[0]) + (pair[3] - pair[1])};
+            else
+                instruction = new int[]{1, pair[0], pair[1] + 2, pair[2], pair[3] + 2};
+            distinct.add(instruction);
+        }
+
+        return new ImmutablePair<>(conditionsAndDistinct.getFirst(), distinct);
+    }
+
+    private int calculate(int k, int table) {
+        int result = 0;
+        for (int i = 0; i < k; ++i)
+            result += (tables.get(table).getAttributes().size() - i);
+        return result;
     }
 }

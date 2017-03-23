@@ -25,22 +25,22 @@ public class Main {
             } else System.out.println("... Naive database for database number " + i + " already exists, skipping creation");
         }
 
-        List<QueryRunner> queryRunners = Arrays.asList(new NaiveRunner(), new AggOneRunner(databases));
+        List<QueryRunner> queryRunners = Arrays.asList(new NaiveRunner(), new AggOneRunner(databases), new AggTwoRunner(databases));
 
         experiment:
         for (QueryRunner runner : queryRunners) {
             long experimentStart = System.currentTimeMillis();
             for (int i = 1; i <= NUM_OF_SCALES; ++i) {
                 GCAndWait();
-                runner.runQueryAll(i);
+                runner.runQueryAll(i - 1);
                 GCAndWait();
-                runner.runQueryOne(i);
+                runner.runQueryOne(i - 1);
                 long[] allAggregatesTimes = new long[REPEATS_PER_SCALE];
                 long[] oneAggregateTimes = new long[REPEATS_PER_SCALE];
                 for (int j = 0; j < REPEATS_PER_SCALE; ++j) {
-                    allAggregatesTimes[j] = runner.runQueryAll(i);
+                    allAggregatesTimes[j] = runner.runQueryAll(i - 1);
                     GCAndWait();
-                    oneAggregateTimes[j] = runner.runQueryOne(i);
+                    oneAggregateTimes[j] = runner.runQueryOne(i - 1);
                     GCAndWait();
                     if ((System.currentTimeMillis() - experimentStart) > (TIMEOUT_SECONDS * 1000L))
                         break experiment;

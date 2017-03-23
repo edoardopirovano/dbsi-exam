@@ -3,7 +3,6 @@ package org.candidate697229.algorithms;
 import org.candidate697229.database.Database;
 import org.candidate697229.database.Table;
 
-import java.math.BigInteger;
 import java.sql.*;
 import java.util.LinkedList;
 import java.util.List;
@@ -47,14 +46,14 @@ public class Naive {
         }
     }
 
-    public static List<BigInteger> runQuery(String database, String query) {
-        List<BigInteger> result = new LinkedList<>();
+    public static List<Long> runQuery(String database, String query) {
+        List<Long> result = new LinkedList<>();
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + database);
              Statement statement = conn.createStatement();
              ResultSet rs = statement.executeQuery(query)) {
             rs.next();
             for (int i = 1; i <= rs.getMetaData().getColumnCount(); ++i)
-                result.add(new BigInteger(rs.getString(i)));
+                result.add(rs.getLong(i));
         } catch (SQLException e) {
             throw new InternalError(e);
         }
@@ -75,9 +74,9 @@ public class Naive {
 
     public static String buildQueryOne(Database database) {
         StringBuilder query = new StringBuilder("SELECT SUM(");
-        query.append(database.getTables().get(0).getAttributes().get(1))
+        query.append(database.getTables().get(0).getAttributes().get(0))
                 .append("*")
-                .append(database.getTables().get(1).getAttributes().get(1))
+                .append(database.getTables().get(0).getAttributes().get(0))
                 .append(")");
         buildNaturalJoin(database, query);
         return query.toString();
