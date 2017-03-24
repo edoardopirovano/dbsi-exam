@@ -10,7 +10,7 @@ import java.util.List;
 
 public class Main {
     private static final int NUM_OF_SCALES = 20;
-    private static final int TIMEOUT_SECONDS = 2400;
+    private static final int TIMEOUT_SECONDS = 7200;
     private static final int REPEATS_PER_SCALE = 4;
 
     public static void main(String[] args) {
