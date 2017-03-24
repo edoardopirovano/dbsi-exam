@@ -43,7 +43,7 @@ public class Main {
                     oneAggregateTimes[j] = runner.runQueryOne(i - 1);
                     GCAndWait();
                     if ((System.currentTimeMillis() - experimentStart) > (TIMEOUT_SECONDS * 1000L))
-                        break experiment;
+                        continue experiment;
                 }
                 System.out.println("TIME\t" + runner.getClass().getSimpleName() + "\t" + i + "\tAll\t" + average(allAggregatesTimes));
                 System.out.println("TIME\t" + runner.getClass().getSimpleName() + "\t" + i + "\tOne\t" + average(oneAggregateTimes));
