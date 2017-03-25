@@ -5,7 +5,7 @@ import java.util.Stack;
 /**
  * This class is loosely based on code obtained from http://algs4.cs.princeton.edu/home/
  * with many modifications for our use case/ In particular:
- *  - Unused for deletions removed.
+ *  - Unused code for deletions removed.
  *  - Adapted insertion to allow duplicate keys.
  *  - Introduced iteration methods.
  */
