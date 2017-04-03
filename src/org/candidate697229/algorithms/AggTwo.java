@@ -14,20 +14,21 @@ public class AggTwo {
 
     public AggTwo(Database database) {
         instructions = database.getInstructionsForSummedDatabase();
-        trieJoin = new TrieJoin(computeSumDatabase(database), database.getJoinInstructions());
+        Database sumDatabase = computeSumDatabase(database);
+        trieJoin = new TrieJoin(sumDatabase, sumDatabase.getJoinInstructions());
         trieJoin.init();
     }
 
     public long[] computeAllAggregatesOfNaturalJoin() {
         long[] result = new long[instructions.size()];
-        while (!trieJoin.atEnd()) {
+        while (!trieJoin.overallAtEnd()) {
             long[][] tuple = trieJoin.resultTuple();
             long countProduct = 1;
             for (long[] aTuple : tuple) countProduct *= aTuple[1];
             int pos = 0;
             for (int[] instruction : instructions)
                 result[pos++] += calculateFromInstruction(instruction, tuple, countProduct);
-            trieJoin.next();
+            trieJoin.overallNext();
         }
         return result;
     }
@@ -41,12 +42,12 @@ public class AggTwo {
 
     public long computeOneAggregateOfNaturalJoin() {
         long result = 0;
-        while (!trieJoin.atEnd()) {
+        while (!trieJoin.overallAtEnd()) {
             long[][] tuple = trieJoin.resultTuple();
             long countProduct = 1;
             for (long[] aTuple : tuple) countProduct *= aTuple[1];
             result += calculateFromInstruction(instructions.get(0), tuple, countProduct);
-            trieJoin.next();
+            trieJoin.overallNext();
         }
         return result;
     }

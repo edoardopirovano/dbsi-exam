@@ -1,17 +1,17 @@
 package org.candidate697229.structures;
 
+import java.util.Stack;
+
 public class SequentialIterator implements Iterator {
     private final long[][] tuples;
     private int position = 0;
-    private int depth = 0;
+    private int depth = -1;
     private boolean atEnd = false;
+    private Stack<Integer> returnPositions = new Stack<>();
 
     public SequentialIterator(long[][] tuples) {
         this.tuples = tuples;
-        for (int i = 0; i < tuples.length - 1; ++i) {
-            if (tuples[i][0] > tuples[i + 1][0])
-                throw new InternalError("Tuples are not sorted on the join attribute!");
-        }
+        // TODO check sorted
     }
 
     @Override
@@ -25,13 +25,8 @@ public class SequentialIterator implements Iterator {
     }
 
     @Override
-    public boolean isNextKeySame() {
-        return isNextInView() && tuples[position][depth] == tuples[position + 1][depth];
-    }
-
-    @Override
     public void seek(long x) {
-        while (!atEnd && tuples[position][depth] != x)
+        while (!atEnd && tuples[position][depth] < x)
             next();
     }
 
@@ -47,15 +42,11 @@ public class SequentialIterator implements Iterator {
 
     @Override
     public void next() {
-        if (!isNextInView())
+        long startValue = tuples[position][depth];
+        while (isNextInView() && tuples[position][depth] == startValue)
+            ++position;
+        if (tuples[position][depth] == startValue)
             atEnd = true;
-        ++position;
-    }
-
-    @Override
-    public void prev() {
-        --position;
-        atEnd = false;
     }
 
     @Override
@@ -63,16 +54,14 @@ public class SequentialIterator implements Iterator {
         return tuples[position];
     }
 
-    public void up() {
-        depth--;
-        if (atEnd) {
-            position--;
-            if (isNextInView())
-                atEnd = false;
-        }
+    public void open() {
+        depth++;
+        returnPositions.push(position);
     }
 
-    public void down() {
-        depth++;
+    public void up() {
+        depth--;
+        position = returnPositions.pop();
+        atEnd = false;
     }
 }

@@ -5,17 +5,13 @@ public interface Iterator {
 
     long key();
 
-    boolean isNextKeySame();
-
     void seek(long x1);
 
     void next();
 
-    void prev();
-
     long[] value();
 
-    void up();
+    void open();
 
-    void down();
+    void up();
 }

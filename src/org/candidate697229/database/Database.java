@@ -106,36 +106,25 @@ public class Database {
     }
 
     public List<List<int[]>> getJoinInstructions() {
-        return findAttributePositions().values().stream().filter(positions -> positions.size() > 1).sorted(new Comparator<List<int[]>>() {
-            @Override
-            public int compare(List<int[]> joinCondition1, List<int[]> joinCondition2) {
-                return Integer.compare(getMinPosInTable(joinCondition1), getMinPosInTable(joinCondition2));
-            }
-
-            private int getMinPosInTable(List<int[]> joinCondition) {
-                //noinspection OptionalGetWithoutIsPresent
-                return joinCondition.stream().mapToInt(pos -> pos[1]).min().getAsInt();
-            }
-        }).collect(Collectors.toList());
+        return findAttributePositions().values().stream().collect(Collectors.toList());
     }
 
     public List<int[]> getInstructionsForSummedDatabase() {
         List<int[]> distinctPairs = getAllPairs();
         List<int[]> instructions = new ArrayList<>();
 
-        int[] joinAttributesIn = new int[tables.size()];
-        getJoinInstructions().forEach(joinCondition -> joinCondition.forEach(joinPos -> joinAttributesIn[joinPos[0]]++));
+        int totalJoinAttributes = (int) getJoinInstructions().stream().filter(joinCondition -> joinCondition.size() > 1).count();
 
         for (int[] pair : distinctPairs) {
             int[] instruction;
             if (pair[0] == pair[2])
                 instruction = new int[]{0, pair[0], 1 +
-                        joinAttributesIn[pair[0]] +
+                        totalJoinAttributes +
                         tables.get(pair[0]).getAttributes().size() +
                         calculatePosition(pair[1], pair[0]) +
                         (pair[3] - pair[1])};
             else
-                instruction = new int[]{1, pair[0], pair[1] + 1 + joinAttributesIn[pair[0]], pair[2], pair[3] + 1 + joinAttributesIn[pair[2]]};
+                instruction = new int[]{1, pair[0], 1 + totalJoinAttributes + pair[1], pair[2], 1 + totalJoinAttributes + pair[3]};
             instructions.add(instruction);
         }
 

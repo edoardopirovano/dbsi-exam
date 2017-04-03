@@ -18,12 +18,12 @@ public class AggOne {
     public long[] computeAllAggregatesOfNaturalJoin() {
         result = new long[distinctPairs.size()];
 
-        while (!trieJoin.atEnd()) {
+        while (!trieJoin.overallAtEnd()) {
             long[][] tuple = trieJoin.resultTuple();
             int agg = 0;
             for (int[] instruction : distinctPairs)
                 result[agg++] += calculateFromInstruction(instruction, tuple);
-            trieJoin.next();
+            trieJoin.overallNext();
         }
         return result;
     }
@@ -35,10 +35,10 @@ public class AggOne {
     public long computeOneAggregateOfNaturalJoin() {
         long result = 0;
 
-        while (!trieJoin.atEnd()) {
+        while (!trieJoin.overallAtEnd()) {
             long[][] tuple = trieJoin.resultTuple();
             result += calculateFromInstruction(distinctPairs.get(0), tuple);
-            trieJoin.next();
+            trieJoin.overallNext();
         }
 
         return result;

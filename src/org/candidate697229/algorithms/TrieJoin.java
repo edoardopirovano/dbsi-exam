@@ -17,6 +17,7 @@ class TrieJoin {
     private int k;
     private long[][] resultTuple;
     private boolean atEnd = false;
+    private int depth = -1;
 
     TrieJoin(Database database, List<List<int[]>> joinInstructions) {
         k = database.getTables().size();
@@ -29,17 +30,8 @@ class TrieJoin {
         unaryTrieJoins = joinInstructions.stream().map(joinInstruction -> {
                 List<Iterator> usedIterators = new ArrayList<>(joinInstruction.size());
                 usedIterators.addAll(joinInstruction.stream().map(position -> iterators.get(position[0])).collect(Collectors.toList()));
-            return new UnaryTrieJoin(usedIterators);
-            }
-        ).collect(Collectors.toList());
-    }
-
-    void init() {
-        findAllBindings(false);
-    }
-
-    boolean atEnd() {
-        return atEnd;
+                return new UnaryTrieJoin(usedIterators);
+            }).collect(Collectors.toList());
     }
 
     long[][] resultTuple() {
@@ -48,64 +40,86 @@ class TrieJoin {
         return resultTuple;
     }
 
-    void next() {
-        findAllBindings(true);
+    private boolean atEnd() {
+        return unaryTrieJoins.get(depth).atEnd();
     }
 
-    private void findAllBindings(boolean shouldDoNext) {
-        int depth = unaryTrieJoins.size() - 1;
+    private void next() {
+        unaryTrieJoins.get(depth).next();
+    }
+
+    void init() {
+        findNext(false);
+    }
+
+    boolean overallAtEnd() {
+        return atEnd;
+    }
+
+    void overallNext() {
+        findNext(true);
+    }
+
+    private void findNext(boolean shouldAdvance) {
         do {
-            while (depth >= 0) {
-                if (!unaryTrieJoins.get(depth).atEnd() && shouldDoNext) {
-                    unaryTrieJoins.get(depth).next();
-                    shouldDoNext = false;
-                }
-                if (!unaryTrieJoins.get(depth).atEnd())
-                    break;
-                if (depth == 0)  {
-                    atEnd = true;
-                    return;
-                }
-                unaryTrieJoins.get(depth--).up();
+            while (depth > 0 && atEnd()) {
+                up();
+                next();
+                if (!atEnd())
+                    shouldAdvance = false;
             }
-            depth++;
-            while (depth < unaryTrieJoins.size()) {
-                unaryTrieJoins.get(depth).down();
-                if (unaryTrieJoins.get(depth).atEnd())
-                    break;
-                depth++;
+            if (depth == 0 && atEnd()) {
+                atEnd = true;
+                return;
             }
-        } while (depth != unaryTrieJoins.size());
+            if (shouldAdvance) {
+                next();
+                shouldAdvance = atEnd();
+            }
+            while (depth < unaryTrieJoins.size() - 1) {
+                open();
+                if (atEnd())
+                    break;
+            }
+        } while (atEnd());
     }
 
+    private void open() {
+        unaryTrieJoins.get(++depth).open();
+    }
+
+    private void up() {
+        unaryTrieJoins.get(depth--).up();
+    }
 }
 
 class UnaryTrieJoin {
     private final List<Iterator> iterators;
     private int k;
-    private long[] returnPositions;
 
     UnaryTrieJoin(List<Iterator> iterators) {
         this.iterators = iterators;
         k = iterators.size();
-        returnPositions = new long[k];
     }
 
-    private boolean atEnd = false;
+    private boolean atEnd;
     private int p = 0;
+
+    private void init() {
+        atEnd = false;
+        for (int i = 0; i < k; ++i) {
+            if (iterators.get(i).atEnd())
+                atEnd = true;
+        }
+        if (!atEnd)
+            leapfrogSearch();
+    }
 
     private void leapfrogSearch() {
         long x1 = iterators.get(Math.floorMod(p - 1, k)).key();
         while (true) {
             long x = iterators.get(p).key();
             if (x == x1) {
-                // Set p to first iterator with duplicates, if applicable
-                for (int i = 0; i < k; ++i) {
-                    if (iterators.get(i).isNextKeySame()) {
-                        p = i;
-                        return;
-                    }
-                }
                 return;
             } else {
                 iterators.get(p).seek(x1);
@@ -121,45 +135,10 @@ class UnaryTrieJoin {
     }
 
     void next() {
-        long previousKey = iterators.get(p).key();
         iterators.get(p).next();
-        if (iterators.get(p).atEnd() && returnPositions[p] == 0) {
+        if (iterators.get(p).atEnd())
             atEnd = true;
-            return;
-        }
-        if (!iterators.get(p).atEnd() && iterators.get(p).key() == previousKey) {
-            returnPositions[p] += 1;
-            return;
-        }
-        if (returnPositions[p] == 0) {
-            p = Math.floorMod(p + 1, k);
-            leapfrogSearch();
-        } else {
-            for (int i = 0; i <= returnPositions[p]; ++i)
-                iterators.get(p).prev();
-            returnPositions[p] = 0;
-
-            for (int i = 1; i < k; ++i) {
-                int j = Math.floorMod(p + i, k);
-                iterators.get(j).next();
-                if (!iterators.get(j).atEnd() && iterators.get(j).key() == previousKey) {
-                    returnPositions[j] += 1;
-                    return;
-                }
-                if (returnPositions[j] > 0) {
-                    for (int l = 0; l <= returnPositions[j]; ++l)
-                        iterators.get(j).prev();
-                    returnPositions[j] = 0;
-                } else iterators.get(j).prev();
-            }
-
-            // If we get to here we have iterated all duplicates
-            while (!iterators.get(p).atEnd() && iterators.get(p).key() == previousKey)
-                iterators.get(p).next();
-            if (iterators.get(p).atEnd()) {
-                atEnd = true;
-                return;
-            }
+        else {
             p = Math.floorMod(p + 1, k);
             leapfrogSearch();
         }
@@ -169,20 +148,9 @@ class UnaryTrieJoin {
         return atEnd;
     }
 
-    void init() {
-        atEnd = false;
-        for (int i = 0; i < k; ++i) {
-            if (iterators.get(i).atEnd())
-                atEnd = true;
-        }
-        if (!atEnd)
-            leapfrogSearch();
-    }
-
-
-    void down() {
-        iterators.forEach(Iterator::down);
-        leapfrogSearch();
+    void open() {
+        iterators.forEach(Iterator::open);
+        init();
     }
 
     void up() {
