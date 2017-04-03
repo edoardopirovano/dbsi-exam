@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 class TrieJoin {
-    private final List<Iterator> iterators;
-    private final List<UnaryTrieJoin> unaryTrieJoins;
+    private final Iterator[] iterators;
+    private final UnaryTrieJoin[] unaryTrieJoins;
     private int k;
     private long[][] resultTuple;
     private boolean overallAtEnd = false;
@@ -18,19 +18,20 @@ class TrieJoin {
 
     TrieJoin(Database database, List<List<int[]>> joinInstructions) {
         k = database.getRelations().size();
-        iterators = new ArrayList<>(k);
-        iterators.addAll(database.getRelations().stream().map(table -> new SequentialIterator(table.getTuples())).collect(Collectors.toList()));
+        iterators = new Iterator[k];
+        for (int i = 0; i < k; ++i)
+            iterators[i] = new SequentialIterator(database.getRelations().get(i).getTuples());
         resultTuple = new long[k][];
         unaryTrieJoins = joinInstructions.stream().map(joinInstruction -> {
                 List<Iterator> usedIterators = new ArrayList<>(joinInstruction.size());
-                usedIterators.addAll(joinInstruction.stream().map(position -> iterators.get(position[0])).collect(Collectors.toList()));
+                usedIterators.addAll(joinInstruction.stream().map(position -> iterators[position[0]]).collect(Collectors.toList()));
                 return new UnaryTrieJoin(usedIterators);
-            }).collect(Collectors.toList());
+            }).collect(Collectors.toList()).toArray(new UnaryTrieJoin[0]);
     }
 
     long[][] resultTuple() {
         for (int i = 0; i < k; ++i)
-            resultTuple[i] = iterators.get(i).value();
+            resultTuple[i] = iterators[i].value();
         return resultTuple;
     }
 
@@ -42,9 +43,7 @@ class TrieJoin {
         return overallAtEnd;
     }
 
-    void overallNext() {
-        findNext(true);
-    }
+    void overallNext() { findNext(true);}
 
     private void findNext(boolean shouldAdvance) {
         do {
@@ -62,7 +61,7 @@ class TrieJoin {
                 next();
                 shouldAdvance = atEnd();
             }
-            while (depth < unaryTrieJoins.size() - 1) {
+            while (depth < unaryTrieJoins.length - 1) {
                 open();
                 if (atEnd())
                     break;
@@ -71,28 +70,28 @@ class TrieJoin {
     }
 
     private boolean atEnd() {
-        return unaryTrieJoins.get(depth).atEnd();
+        return unaryTrieJoins[depth].atEnd();
     }
 
     private void next() {
-        unaryTrieJoins.get(depth).next();
+        unaryTrieJoins[depth].next();
     }
 
     private void open() {
-        unaryTrieJoins.get(++depth).open();
+        unaryTrieJoins[++depth].open();
     }
 
     private void up() {
-        unaryTrieJoins.get(depth--).up();
+        unaryTrieJoins[depth--].up();
     }
 }
 
 class UnaryTrieJoin {
-    private final List<Iterator> iterators;
+    private final Iterator[] iterators;
     private int k;
 
     UnaryTrieJoin(List<Iterator> iterators) {
-        this.iterators = iterators;
+        this.iterators = iterators.toArray(new Iterator[0]);
         k = iterators.size();
     }
 
@@ -102,7 +101,7 @@ class UnaryTrieJoin {
     private void init() {
         atEnd = false;
         for (int i = 0; i < k; ++i) {
-            if (iterators.get(i).atEnd())
+            if (iterators[i].atEnd())
                 atEnd = true;
         }
         if (!atEnd)
@@ -110,18 +109,18 @@ class UnaryTrieJoin {
     }
 
     private void leapfrogSearch() {
-        long x1 = iterators.get(Math.floorMod(p - 1, k)).key();
+        long x1 = iterators[Math.floorMod(p - 1, k)].key();
         while (true) {
-            long x = iterators.get(p).key();
+            long x = iterators[p].key();
             if (x == x1) {
                 return;
             } else {
-                iterators.get(p).seek(x1);
-                if (iterators.get(p).atEnd()) {
+                iterators[p].seek(x1);
+                if (iterators[p].atEnd()) {
                     atEnd = true;
                     return;
                 } else {
-                    x1 = iterators.get(p).key();
+                    x1 = iterators[p].key();
                     p = Math.floorMod(p + 1, k);
                 }
             }
@@ -129,8 +128,8 @@ class UnaryTrieJoin {
     }
 
     void next() {
-        iterators.get(p).next();
-        if (iterators.get(p).atEnd())
+        iterators[p].next();
+        if (iterators[p].atEnd())
             atEnd = true;
         else {
             p = Math.floorMod(p + 1, k);
@@ -143,11 +142,11 @@ class UnaryTrieJoin {
     }
 
     void open() {
-        iterators.forEach(Iterator::open);
+        for (Iterator iterator : iterators) iterator.open();
         init();
     }
 
     void up() {
-        iterators.forEach(Iterator::up);
+        for (Iterator iterator : iterators) iterator.up();
     }
 }

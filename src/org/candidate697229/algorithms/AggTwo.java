@@ -67,7 +67,7 @@ public class AggTwo {
             if (pair[0] == pair[2])
                 instruction = new int[]{0, pair[0], 1 +
                         database.getRelations().get(pair[0]).getAttributes().size() +
-                        calculatePosition(pair[1], pair[0], database.getRelations().get(pair[0]).getAttributes().size()) +
+                        calculatePosition(pair[1], database.getRelations().get(pair[0]).getAttributes().size()) +
                         (pair[3] - pair[1])};
             else
                 instruction = new int[]{1, pair[0], 1 + pair[1], pair[2], 1 + pair[3]};
@@ -77,7 +77,7 @@ public class AggTwo {
         return instructions;
     }
 
-    private int calculatePosition(int k, int table, int tableSize) {
+    private int calculatePosition(int k, int tableSize) {
         int result = 0;
         for (int i = 0; i < k; ++i)
             result += (tableSize - i);
