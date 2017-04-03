@@ -106,25 +106,30 @@ public class Database {
     }
 
     public List<List<int[]>> getJoinInstructions() {
-        return findAttributePositions().values().stream().collect(Collectors.toList());
+        return findAttributePositions().values().stream().sorted((variable1, variable2) -> {
+            for (int[] positionOne : variable1) {
+                for (int[] positionTwo : variable2) {
+                    if (positionOne[0] == positionTwo[0])
+                        return Integer.compare(positionOne[1], positionTwo[1]);
+                }
+            }
+            return Integer.compare(variable2.size(), variable1.size());
+        }).collect(Collectors.toList());
     }
 
     public List<int[]> getInstructionsForSummedDatabase() {
         List<int[]> distinctPairs = getAllPairs();
         List<int[]> instructions = new ArrayList<>();
 
-        int totalJoinAttributes = (int) getJoinInstructions().stream().filter(joinCondition -> joinCondition.size() > 1).count();
-
         for (int[] pair : distinctPairs) {
             int[] instruction;
             if (pair[0] == pair[2])
                 instruction = new int[]{0, pair[0], 1 +
-                        totalJoinAttributes +
                         tables.get(pair[0]).getAttributes().size() +
                         calculatePosition(pair[1], pair[0]) +
                         (pair[3] - pair[1])};
             else
-                instruction = new int[]{1, pair[0], 1 + totalJoinAttributes + pair[1], pair[2], 1 + totalJoinAttributes + pair[3]};
+                instruction = new int[]{1, pair[0], 1 + pair[1], pair[2], 1 + pair[3]};
             instructions.add(instruction);
         }
 

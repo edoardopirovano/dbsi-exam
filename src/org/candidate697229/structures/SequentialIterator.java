@@ -1,13 +1,10 @@
 package org.candidate697229.structures;
 
-import java.util.Stack;
-
 public class SequentialIterator implements Iterator {
     private final long[][] tuples;
     private int position = 0;
     private int depth = -1;
     private boolean atEnd = false;
-    private Stack<Integer> returnPositions = new Stack<>();
 
     public SequentialIterator(long[][] tuples) {
         this.tuples = tuples;
@@ -28,6 +25,16 @@ public class SequentialIterator implements Iterator {
     public void seek(long x) {
         while (!atEnd && tuples[position][depth] < x)
             next();
+    }
+
+    private boolean isPreviousInView() {
+        if (position == 0)
+            return false;
+        for (int i = 0; i < depth; ++i) {
+            if (tuples[position][i] != tuples[position - 1][i])
+                return false;
+        }
+        return true;
     }
 
     private boolean isNextInView() {
@@ -55,13 +62,14 @@ public class SequentialIterator implements Iterator {
     }
 
     public void open() {
+        assert (!atEnd);
         depth++;
-        returnPositions.push(position);
+        while (isPreviousInView())
+            --position;
     }
 
     public void up() {
         depth--;
-        position = returnPositions.pop();
         atEnd = false;
     }
 }

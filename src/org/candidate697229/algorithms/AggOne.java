@@ -17,7 +17,6 @@ public class AggOne {
 
     public long[] computeAllAggregatesOfNaturalJoin() {
         result = new long[distinctPairs.size()];
-
         while (!trieJoin.overallAtEnd()) {
             long[][] tuple = trieJoin.resultTuple();
             int agg = 0;
