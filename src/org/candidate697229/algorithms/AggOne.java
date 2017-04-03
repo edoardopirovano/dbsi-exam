@@ -2,26 +2,24 @@ package org.candidate697229.algorithms;
 
 import org.candidate697229.database.Database;
 
-import java.util.List;
-
 public class AggOne {
-    private final List<int[]> distinctPairs;
+    private final int[][] distinctPairs;
     private final TrieJoin trieJoin;
     private long[] result;
 
     public AggOne(Database database) {
-        distinctPairs = database.getAllPairs();
-        trieJoin = new TrieJoin(database, database.getJoinInstructions());
+        distinctPairs = database.getAllPairsOfColums().toArray(new int[0][]);
+        trieJoin = new TrieJoin(database, database.getAllExplicitJoinConditions());
         trieJoin.init();
     }
 
     public long[] computeAllAggregatesOfNaturalJoin() {
-        result = new long[distinctPairs.size()];
+        result = new long[distinctPairs.length];
         while (!trieJoin.overallAtEnd()) {
             long[][] tuple = trieJoin.resultTuple();
             int agg = 0;
-            for (int[] instruction : distinctPairs)
-                result[agg++] += calculateFromInstruction(instruction, tuple);
+            for (int[] distinctPair : distinctPairs)
+                result[agg++] += calculateFromInstruction(distinctPair, tuple);
             trieJoin.overallNext();
         }
         return result;
@@ -36,7 +34,7 @@ public class AggOne {
 
         while (!trieJoin.overallAtEnd()) {
             long[][] tuple = trieJoin.resultTuple();
-            result += calculateFromInstruction(distinctPairs.get(0), tuple);
+            result += calculateFromInstruction(distinctPairs[0], tuple);
             trieJoin.overallNext();
         }
 

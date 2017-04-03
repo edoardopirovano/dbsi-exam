@@ -1,7 +1,7 @@
 package org.candidate697229.algorithms;
 
 import org.candidate697229.database.Database;
-import org.candidate697229.database.Table;
+import org.candidate697229.database.Relation;
 
 import java.sql.*;
 import java.util.LinkedList;
@@ -12,26 +12,26 @@ public class Naive {
 
     public static void makeSQLiteDatabase(Database database, String name) {
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + name)) {
-            if (conn != null) database.getTables().forEach(table -> makeTable(conn, table));
+            if (conn != null) database.getRelations().forEach(relation -> makeTable(conn, relation));
             else throw new InternalError("Invalid database connection.");
         } catch (SQLException e) {
             throw new InternalError(e);
         }
     }
 
-    private static void makeTable(Connection conn, Table table) {
+    private static void makeTable(Connection conn, Relation relation) {
         try {
             Statement createTable = conn.createStatement();
-            createTable.execute("CREATE TABLE " + table.getName() + " (" +
-                    table.getAttributes().stream()
+            createTable.execute("CREATE TABLE " + relation.getName() + " (" +
+                    relation.getAttributes().stream()
                             .map(attribute -> attribute + " BIGINT NOT NULL")
                             .collect(Collectors.joining(", "))
                     + ");");
 
-            StringBuilder insertSql = new StringBuilder("INSERT INTO " + table.getName() + "(");
-            insertSql.append(String.join(",", table.getAttributes()));
+            StringBuilder insertSql = new StringBuilder("INSERT INTO " + relation.getName() + "(");
+            insertSql.append(String.join(",", relation.getAttributes()));
             insertSql.append(") VALUES ");
-            long[][] tuples = table.getTuples();
+            long[][] tuples = relation.getTuples();
             for (long[] tuple : tuples) {
                 insertSql.append("(");
                 for (int j = 0; j < tuple.length - 1; ++j)
@@ -62,7 +62,7 @@ public class Naive {
 
     public static String buildQueryAll(Database database) {
         StringBuilder query = new StringBuilder("SELECT ");
-        database.getAttributePairs().forEach(attributePair -> query
+        database.getAttributeNamePairs().forEach(attributePair -> query
                 .append("SUM(")
                 .append(attributePair.getFirst())
                 .append("*")
@@ -74,9 +74,9 @@ public class Naive {
 
     public static String buildQueryOne(Database database) {
         StringBuilder query = new StringBuilder("SELECT SUM(");
-        query.append(database.getTables().get(0).getAttributes().get(0))
+        query.append(database.getRelations().get(0).getAttributes().get(0))
                 .append("*")
-                .append(database.getTables().get(0).getAttributes().get(0))
+                .append(database.getRelations().get(0).getAttributes().get(0))
                 .append(")");
         buildNaturalJoin(database, query);
         return query.toString();
@@ -84,8 +84,8 @@ public class Naive {
 
     private static void buildNaturalJoin(Database database, StringBuilder query) {
         query.append(" FROM ")
-                .append(database.getTables().stream()
-                        .map(Table::getName)
+                .append(database.getRelations().stream()
+                        .map(Relation::getName)
                         .collect(Collectors.joining(" NATURAL JOIN ")))
                 .append(";");
     }

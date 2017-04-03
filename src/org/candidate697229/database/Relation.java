@@ -6,12 +6,12 @@ import java.nio.file.Files;
 import java.util.LinkedList;
 import java.util.List;
 
-public class Table {
+public class Relation {
     private String name;
     private List<String> attributes;
     private long[][] tuples;
 
-    public Table(String name, List<String> attributes) {
+    public Relation(String name, List<String> attributes) {
         this.name = name;
         this.attributes = attributes;
     }
@@ -30,6 +30,13 @@ public class Table {
         } catch (IOException e) {
             throw new InternalError(e);
         }
+        tupleList.sort((tuple1, tuple2) -> {
+            for (int i = 0, j = 0; i < tuple1.length && j < tuple2.length; i++, j++) {
+                if (tuple1[i] != tuple2[j])
+                    return Long.compare(tuple1[i], tuple2[j]);
+            }
+            return tuple1.length - tuple2.length;
+        });
         tuples = new long[tupleList.size()][];
         for (int i = 0; tupleList.size() > 0; ++i)
             tuples[i] = tupleList.removeFirst();

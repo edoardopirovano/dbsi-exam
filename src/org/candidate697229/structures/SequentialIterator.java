@@ -8,7 +8,6 @@ public class SequentialIterator implements Iterator {
 
     public SequentialIterator(long[][] tuples) {
         this.tuples = tuples;
-        // TODO check sorted
     }
 
     @Override

@@ -9,18 +9,18 @@ import java.util.stream.Collectors;
 import static org.candidate697229.config.Configuration.USE_TEST_TABLE;
 
 public class Database {
-    private ArrayList<Table> tables;
+    private ArrayList<Relation> relations;
 
-    public Database(ArrayList<Table> tables) {
-        this.tables = tables;
+    public Database(ArrayList<Relation> relations) {
+        this.relations = relations;
     }
 
     private void readFromDirectory(String directoryName) {
-        tables.forEach(table -> table.readFromFile(new File(directoryName, table.getName() + ".tbl")));
+        relations.forEach(relation -> relation.readFromFile(new File(directoryName, relation.getName() + ".tbl")));
     }
 
-    public ArrayList<Table> getTables() {
-        return tables;
+    public ArrayList<Relation> getRelations() {
+        return relations;
     }
 
     public static Database makeFromDirectory(String directoryName) {
@@ -34,33 +34,33 @@ public class Database {
         return database;
     }
 
-    private static ArrayList<Table> housingTables() {
-        ArrayList<Table> tables = new ArrayList<>(6);
-        tables.add(new Table("House", Arrays.asList("postcode", "area", "price", "bedrooms", "bathrooms",
+    private static ArrayList<Relation> housingTables() {
+        ArrayList<Relation> relations = new ArrayList<>(6);
+        relations.add(new Relation("House", Arrays.asList("postcode", "area", "price", "bedrooms", "bathrooms",
                 "kitchen", "house", "flat", "condo", "garden", "parking")));
-        tables.add(new Table("Shop", Arrays.asList("postcode", "openinghoursshop", "pricerangeshop",
+        relations.add(new Relation("Shop", Arrays.asList("postcode", "openinghoursshop", "pricerangeshop",
                 "sainsburys", "tesco", "ms")));
-        tables.add(new Table("Institution", Arrays.asList("postcode", "typeeducation", "sizeinstitution")));
-        tables.add(new Table("Restaurant", Arrays.asList("postcode", "openinghoursrest", "pricerangerest")));
-        tables.add(new Table("Demographics", Arrays.asList("postcode", "averagesalary", "crimesperyear",
+        relations.add(new Relation("Institution", Arrays.asList("postcode", "typeeducation", "sizeinstitution")));
+        relations.add(new Relation("Restaurant", Arrays.asList("postcode", "openinghoursrest", "pricerangerest")));
+        relations.add(new Relation("Demographics", Arrays.asList("postcode", "averagesalary", "crimesperyear",
                 "unemployment", "nbhospitals")));
-        tables.add(new Table("Transport", Arrays.asList("postcode", "nbbuslines", "nbtrainstations",
+        relations.add(new Relation("Transport", Arrays.asList("postcode", "nbbuslines", "nbtrainstations",
                 "distancecitycentre")));
-        return tables;
+        return relations;
     }
 
-    private static ArrayList<Table> testTables() {
-        ArrayList<Table> tables = new ArrayList<>(4);
-        tables.add(new Table("R1", Arrays.asList("A","B","C")));
-        tables.add(new Table("R2", Arrays.asList("A","B","D")));
-        tables.add(new Table("R3", Arrays.asList("A","E")));
-        tables.add(new Table("R4", Arrays.asList("E","F")));
-        return tables;
+    private static ArrayList<Relation> testTables() {
+        ArrayList<Relation> relations = new ArrayList<>(4);
+        relations.add(new Relation("R1", Arrays.asList("A","B","C")));
+        relations.add(new Relation("R2", Arrays.asList("A","B","D")));
+        relations.add(new Relation("R3", Arrays.asList("A","E")));
+        relations.add(new Relation("R4", Arrays.asList("E","F")));
+        return relations;
     }
 
-    public List<ImmutablePair<String, String>> getAttributePairs() {
-        List<String> attributes = getTables().stream()
-                .flatMap(table -> table.getAttributes().stream())
+    public List<ImmutablePair<String, String>> getAttributeNamePairs() {
+        List<String> attributes = getRelations().stream()
+                .flatMap(relation -> relation.getAttributes().stream())
                 .distinct()
                 .collect(Collectors.toList());
 
@@ -74,7 +74,7 @@ public class Database {
         return attributePairs;
     }
 
-    public List<int[]> getAllPairs() {
+    public List<int[]> getAllPairsOfColums() {
         HashMap<String, List<int[]>> seenWhere = findAttributePositions();
         List<int[]> distinctAttributes = seenWhere.values().stream().map(x -> x.get(0)).collect(Collectors.toList());
 
@@ -93,8 +93,8 @@ public class Database {
 
     private HashMap<String, List<int[]>> findAttributePositions() {
         HashMap<String, List<int[]>> seenWhere = new LinkedHashMap<>();
-        for (int i = 0; i < tables.size(); ++i) {
-            List<String> attributes = tables.get(i).getAttributes();
+        for (int i = 0; i < relations.size(); ++i) {
+            List<String> attributes = relations.get(i).getAttributes();
             for (int j = 0; j < attributes.size(); ++j) {
                 if (seenWhere.containsKey(attributes.get(j)))
                     seenWhere.get(attributes.get(j)).add(new int[]{i, j});
@@ -105,7 +105,7 @@ public class Database {
         return seenWhere;
     }
 
-    public List<List<int[]>> getJoinInstructions() {
+    public List<List<int[]>> getAllExplicitJoinConditions() {
         return findAttributePositions().values().stream().sorted((variable1, variable2) -> {
             for (int[] positionOne : variable1) {
                 for (int[] positionTwo : variable2) {
@@ -115,31 +115,5 @@ public class Database {
             }
             return Integer.compare(variable2.size(), variable1.size());
         }).collect(Collectors.toList());
-    }
-
-    public List<int[]> getInstructionsForSummedDatabase() {
-        List<int[]> distinctPairs = getAllPairs();
-        List<int[]> instructions = new ArrayList<>();
-
-        for (int[] pair : distinctPairs) {
-            int[] instruction;
-            if (pair[0] == pair[2])
-                instruction = new int[]{0, pair[0], 1 +
-                        tables.get(pair[0]).getAttributes().size() +
-                        calculatePosition(pair[1], pair[0]) +
-                        (pair[3] - pair[1])};
-            else
-                instruction = new int[]{1, pair[0], 1 + pair[1], pair[2], 1 + pair[3]};
-            instructions.add(instruction);
-        }
-
-        return instructions;
-    }
-
-    private int calculatePosition(int k, int table) {
-        int result = 0;
-        for (int i = 0; i < k; ++i)
-            result += (tables.get(table).getAttributes().size() - i);
-        return result;
     }
 }

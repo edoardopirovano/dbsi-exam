@@ -1,7 +1,7 @@
 package org.candidate697229.algorithms;
 
 import org.candidate697229.database.Database;
-import org.candidate697229.database.Table;
+import org.candidate697229.database.Relation;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -14,9 +14,9 @@ public class AggTwo {
     private final TrieJoin trieJoin;
 
     public AggTwo(Database database) {
-        instructions = database.getInstructionsForSummedDatabase();
-        numberOfJoinAttributes = new int[database.getTables().size()];
-        trieJoin = new TrieJoin(computeSumDatabase(database), database.getJoinInstructions());
+        instructions = getInstructionsForSummedDatabase(database);
+        numberOfJoinAttributes = new int[database.getRelations().size()];
+        trieJoin = new TrieJoin(computeSumDatabase(database), database.getAllExplicitJoinConditions());
         trieJoin.init();
     }
 
@@ -58,12 +58,38 @@ public class AggTwo {
         return result;
     }
 
+    private List<int[]> getInstructionsForSummedDatabase(Database database) {
+        List<int[]> distinctPairs = database.getAllPairsOfColums();
+        List<int[]> instructions = new ArrayList<>();
+
+        for (int[] pair : distinctPairs) {
+            int[] instruction;
+            if (pair[0] == pair[2])
+                instruction = new int[]{0, pair[0], 1 +
+                        database.getRelations().get(pair[0]).getAttributes().size() +
+                        calculatePosition(pair[1], pair[0], database.getRelations().get(pair[0]).getAttributes().size()) +
+                        (pair[3] - pair[1])};
+            else
+                instruction = new int[]{1, pair[0], 1 + pair[1], pair[2], 1 + pair[3]};
+            instructions.add(instruction);
+        }
+
+        return instructions;
+    }
+
+    private int calculatePosition(int k, int table, int tableSize) {
+        int result = 0;
+        for (int i = 0; i < k; ++i)
+            result += (tableSize - i);
+        return result;
+    }
+
     private Database computeSumDatabase(Database database) {
-        ArrayList<Table> summedTables = new ArrayList<>(database.getTables().size());
+        ArrayList<Relation> summedRelations = new ArrayList<>(database.getRelations().size());
         int k = 0;
-        for (Table table : database.getTables()) {
+        for (Relation relation : database.getRelations()) {
             List<String> newAttributes = new ArrayList<>();
-            List<List<int[]>> joinInstructions = database.getJoinInstructions().stream()
+            List<List<int[]>> joinInstructions = database.getAllExplicitJoinConditions().stream()
                     .filter(instructions -> instructions.size() > 1).collect(Collectors.toList());
             ArrayList<Integer> joinAttributes = new ArrayList<>();
             for (List<int[]> positions : joinInstructions) {
@@ -73,27 +99,27 @@ public class AggTwo {
                 }
             }
             numberOfJoinAttributes[k] = joinAttributes.size();
-            joinAttributes.forEach(position -> newAttributes.add(table.getAttributes().get(position)));
-            newAttributes.add("COUNT(" + table.getName() + ")");
-            newAttributes.addAll(table.getAttributes().stream()
+            joinAttributes.forEach(position -> newAttributes.add(relation.getAttributes().get(position)));
+            newAttributes.add("COUNT(" + relation.getName() + ")");
+            newAttributes.addAll(relation.getAttributes().stream()
                     .map(attribute -> "SUM(" + attribute + ")")
                     .collect(Collectors.toList())
             );
             List<int[]> pairs = new LinkedList<>();
-            for (int i = 0; i < table.getAttributes().size(); ++i) {
-                for (int j = i; j < table.getAttributes().size(); ++j)
+            for (int i = 0; i < relation.getAttributes().size(); ++i) {
+                for (int j = i; j < relation.getAttributes().size(); ++j)
                     pairs.add(new int[]{i, j});
             }
             newAttributes.addAll(pairs.stream()
-                    .map(pair -> "SUM(" + table.getAttributes().get(pair[0]) + "*" + table.getAttributes().get(pair[1]) + ")")
+                    .map(pair -> "SUM(" + relation.getAttributes().get(pair[0]) + "*" + relation.getAttributes().get(pair[1]) + ")")
                     .collect(Collectors.toList())
             );
-            Table summedTable = new Table(table.getName(), newAttributes);
+            Relation summedRelation = new Relation(relation.getName(), newAttributes);
             LinkedList<long[]> tuples = new LinkedList<>();
             long[] lastJoinKey = new long[joinAttributes.size()];
             long[] currentTuple = new long[newAttributes.size()];
-            copyJoinKeys(table.getTuples()[0], lastJoinKey, currentTuple, joinAttributes);
-            for (long[] tuple : table.getTuples()) {
+            copyJoinKeys(relation.getTuples()[0], lastJoinKey, currentTuple, joinAttributes);
+            for (long[] tuple : relation.getTuples()) {
                 if (compareJoinKeys(tuple, lastJoinKey, joinAttributes)) {
                     tuples.add(currentTuple);
                     currentTuple = new long[currentTuple.length];
@@ -111,11 +137,11 @@ public class AggTwo {
             int i = 0;
             for (long[] tuple : tuples)
                 newTuples[i++] = tuple;
-            summedTable.putTuples(newTuples);
-            summedTables.add(summedTable);
+            summedRelation.putTuples(newTuples);
+            summedRelations.add(summedRelation);
             ++k;
         }
-        return new Database(summedTables);
+        return new Database(summedRelations);
     }
 
     private boolean compareJoinKeys(long[] tuple, long[] lastJoinKey, List<Integer> joinAttributes) {

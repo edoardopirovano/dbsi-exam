@@ -1,7 +1,6 @@
 package org.candidate697229.algorithms;
 
 import org.candidate697229.database.Database;
-import org.candidate697229.database.Table;
 import org.candidate697229.structures.Iterator;
 import org.candidate697229.structures.SequentialIterator;
 
@@ -10,22 +9,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 class TrieJoin {
-    //private static final boolean USE_B_TREE = false;
-
     private final List<Iterator> iterators;
     private final List<UnaryTrieJoin> unaryTrieJoins;
     private int k;
     private long[][] resultTuple;
-    private boolean atEnd = false;
+    private boolean overallAtEnd = false;
     private int depth = -1;
 
     TrieJoin(Database database, List<List<int[]>> joinInstructions) {
-        k = database.getTables().size();
+        k = database.getRelations().size();
         iterators = new ArrayList<>(k);
-        for (Table table : database.getTables()) {
-            //if (USE_B_TREE) iterators.add(new BTreeIterator(table.getTuples()));
-            iterators.add(new SequentialIterator(table.getTuples()));
-        }
+        iterators.addAll(database.getRelations().stream().map(table -> new SequentialIterator(table.getTuples())).collect(Collectors.toList()));
         resultTuple = new long[k][];
         unaryTrieJoins = joinInstructions.stream().map(joinInstruction -> {
                 List<Iterator> usedIterators = new ArrayList<>(joinInstruction.size());
@@ -40,20 +34,12 @@ class TrieJoin {
         return resultTuple;
     }
 
-    private boolean atEnd() {
-        return unaryTrieJoins.get(depth).atEnd();
-    }
-
-    private void next() {
-        unaryTrieJoins.get(depth).next();
-    }
-
     void init() {
         findNext(false);
     }
 
     boolean overallAtEnd() {
-        return atEnd;
+        return overallAtEnd;
     }
 
     void overallNext() {
@@ -69,7 +55,7 @@ class TrieJoin {
                     shouldAdvance = false;
             }
             if (depth == 0 && atEnd()) {
-                atEnd = true;
+                overallAtEnd = true;
                 return;
             }
             if (shouldAdvance) {
@@ -82,6 +68,14 @@ class TrieJoin {
                     break;
             }
         } while (atEnd());
+    }
+
+    private boolean atEnd() {
+        return unaryTrieJoins.get(depth).atEnd();
+    }
+
+    private void next() {
+        unaryTrieJoins.get(depth).next();
     }
 
     private void open() {
