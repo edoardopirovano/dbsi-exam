@@ -14,4 +14,8 @@ public interface Iterator {
     void prev();
 
     long[] value();
+
+    void up();
+
+    void down();
 }

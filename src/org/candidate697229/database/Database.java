@@ -6,6 +6,8 @@ import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.candidate697229.config.Configuration.USE_TEST_TABLE;
+
 public class Database {
     private ArrayList<Table> tables;
 
@@ -26,6 +28,13 @@ public class Database {
     }
 
     public static Database makeFromDirectory(String directoryName, boolean shouldPopulate) {
+        Database database = new Database(USE_TEST_TABLE ? testTables() : housingTables());
+        if (shouldPopulate)
+            database.readFromDirectory(directoryName);
+        return database;
+    }
+
+    private static ArrayList<Table> housingTables() {
         ArrayList<Table> tables = new ArrayList<>(6);
         tables.add(new Table("House", Arrays.asList("postcode", "area", "price", "bedrooms", "bathrooms",
                 "kitchen", "house", "flat", "condo", "garden", "parking")));
@@ -37,10 +46,16 @@ public class Database {
                 "unemployment", "nbhospitals")));
         tables.add(new Table("Transport", Arrays.asList("postcode", "nbbuslines", "nbtrainstations",
                 "distancecitycentre")));
-        Database database = new Database(tables);
-        if (shouldPopulate)
-            database.readFromDirectory(directoryName);
-        return database;
+        return tables;
+    }
+
+    private static ArrayList<Table> testTables() {
+        ArrayList<Table> tables = new ArrayList<>(4);
+        tables.add(new Table("R1", Arrays.asList("A","B","C")));
+        tables.add(new Table("R2", Arrays.asList("A","B","D")));
+        tables.add(new Table("R3", Arrays.asList("A","E")));
+        tables.add(new Table("R4", Arrays.asList("E","F")));
+        return tables;
     }
 
     public List<ImmutablePair<String, String>> getAttributePairs() {
@@ -62,7 +77,6 @@ public class Database {
     public List<int[]> getAllPairs() {
         HashMap<String, List<int[]>> seenWhere = findAttributePositions();
         List<int[]> distinctAttributes = seenWhere.values().stream().map(x -> x.get(0)).collect(Collectors.toList());
-        checkJoinCondition(seenWhere);
 
         List<int[]> distinctPairs = new ArrayList<>();
         for (int j = 0; j < distinctAttributes.size(); ++j) {
@@ -77,27 +91,6 @@ public class Database {
         return distinctPairs;
     }
 
-    /*
-     Verify that our simplifying assumption that we are joining precisely on the first fields
-     of each table does indeed hold.
-      */
-    private void checkJoinCondition(HashMap<String, List<int[]>> seenWhere) {
-        List<int[]> joinConditions = new ArrayList<>();
-        seenWhere.values().stream().filter(positions -> positions.size() > 1).forEach(positions -> {
-            int[] first = positions.remove(0);
-            for (int[] other : positions)
-                joinConditions.add(new int[]{first[0], first[1], other[0], other[1]});
-        });
-        if (joinConditions.size() != tables.size() - 1)
-            throw new InternalError("Join condition is not precisely on first column of each table");
-        assert (joinConditions.size() == tables.size() - 1);
-        for (int i = 0; i < tables.size() - 1; ++i) {
-            if (joinConditions.get(i)[0] != 0 || joinConditions.get(i)[1] != 0
-                    || joinConditions.get(i)[2] != i + 1 || joinConditions.get(i)[3] != 0)
-                throw new InternalError("Join condition is not precisely on first column of each table");
-        }
-    }
-
     private HashMap<String, List<int[]>> findAttributePositions() {
         HashMap<String, List<int[]>> seenWhere = new LinkedHashMap<>();
         for (int i = 0; i < tables.size(); ++i) {
@@ -105,25 +98,44 @@ public class Database {
             for (int j = 0; j < attributes.size(); ++j) {
                 if (seenWhere.containsKey(attributes.get(j)))
                     seenWhere.get(attributes.get(j)).add(new int[]{i, j});
-                else {
+                else
                     seenWhere.put(attributes.get(j), new LinkedList<>(Collections.singleton(new int[]{i, j})));
-                }
             }
         }
         return seenWhere;
+    }
+
+    public List<List<int[]>> getJoinInstructions() {
+        return findAttributePositions().values().stream().filter(positions -> positions.size() > 1).sorted(new Comparator<List<int[]>>() {
+            @Override
+            public int compare(List<int[]> joinCondition1, List<int[]> joinCondition2) {
+                return Integer.compare(getMinPosInTable(joinCondition1), getMinPosInTable(joinCondition2));
+            }
+
+            private int getMinPosInTable(List<int[]> joinCondition) {
+                //noinspection OptionalGetWithoutIsPresent
+                return joinCondition.stream().mapToInt(pos -> pos[1]).min().getAsInt();
+            }
+        }).collect(Collectors.toList());
     }
 
     public List<int[]> getInstructionsForSummedDatabase() {
         List<int[]> distinctPairs = getAllPairs();
         List<int[]> instructions = new ArrayList<>();
 
+        int[] joinAttributesIn = new int[tables.size()];
+        getJoinInstructions().forEach(joinCondition -> joinCondition.forEach(joinPos -> joinAttributesIn[joinPos[0]]++));
+
         for (int[] pair : distinctPairs) {
             int[] instruction;
             if (pair[0] == pair[2])
-                instruction = new int[]{0, pair[0], 2 + tables.get(pair[0]).getAttributes().size() +
-                        calculatePosition(pair[1], pair[0]) + (pair[3] - pair[1])};
+                instruction = new int[]{0, pair[0], 1 +
+                        joinAttributesIn[pair[0]] +
+                        tables.get(pair[0]).getAttributes().size() +
+                        calculatePosition(pair[1], pair[0]) +
+                        (pair[3] - pair[1])};
             else
-                instruction = new int[]{1, pair[0], pair[1] + 2, pair[2], pair[3] + 2};
+                instruction = new int[]{1, pair[0], pair[1] + 1 + joinAttributesIn[pair[0]], pair[2], pair[3] + 1 + joinAttributesIn[pair[2]]};
             instructions.add(instruction);
         }
 

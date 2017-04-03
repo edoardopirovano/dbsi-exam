@@ -11,7 +11,7 @@ public class AggOne {
 
     public AggOne(Database database) {
         distinctPairs = database.getAllPairs();
-        trieJoin = new TrieJoin(database);
+        trieJoin = new TrieJoin(database, database.getJoinInstructions());
         trieJoin.init();
     }
 
@@ -25,7 +25,6 @@ public class AggOne {
                 result[agg++] += calculateFromInstruction(instruction, tuple);
             trieJoin.next();
         }
-
         return result;
     }
 

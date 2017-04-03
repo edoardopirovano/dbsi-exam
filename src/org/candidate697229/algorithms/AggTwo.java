@@ -14,7 +14,7 @@ public class AggTwo {
 
     public AggTwo(Database database) {
         instructions = database.getInstructionsForSummedDatabase();
-        trieJoin = new TrieJoin(computeSumDatabase(database));
+        trieJoin = new TrieJoin(computeSumDatabase(database), database.getJoinInstructions());
         trieJoin.init();
     }
 

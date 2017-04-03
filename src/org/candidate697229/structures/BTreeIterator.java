@@ -5,11 +5,11 @@ import java.util.Stack;
 /**
  * This class is loosely based on code obtained from http://algs4.cs.princeton.edu/home/
  * with many modifications for our use case/ In particular:
- *  - Unused code for deletions removed.
- *  - Adapted insertion to allow duplicate keys.
- *  - Introduced iteration methods.
+ * - Unused code for deletions removed.
+ * - Adapted insertion to allow duplicate keys.
+ * - Introduced iteration methods.
  */
-public class BTreeIterator implements Iterator {
+public class BTreeIterator {
     private static final int M = 4;
 
     private Node root;       // root of the B-tree

@@ -7,18 +7,21 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.candidate697229.config.Configuration.USE_TEST_TABLE;
+
 public class Benchmarker {
     private static final int NUM_OF_SCALES = 20;
     private static final int TIMEOUT_SECONDS = 900; // 15 minutes
-    private static final int REPEATS_PER_SCALE = 4;
+    private static final int REPEATS_PER_SCALE = 1;
 
     public static void main(String[] args) {
         System.out.println("Creating Naive database to benchmark against");
-        for (int i = 1; i <= NUM_OF_SCALES; ++i) {
-            if (!new File("housing/housing-" + i + ".db").exists()) {
-                Naive.makeSQLiteDatabase(Database.makeFromDirectory("housing/housing-" + i), "housing/housing-" + i + ".db");
-                System.out.println("... Created Naive database for database number " + i);
-            } else System.out.println("... Naive database for database number " + i + " already exists, skipping creation");
+        for (int i = 1; i <= (USE_TEST_TABLE ? 1 : NUM_OF_SCALES); ++i) {
+            String dbName = (USE_TEST_TABLE ? "test-table" : "housing/housing-" + i);
+            if (!new File(dbName + ".db").exists()) {
+                Naive.makeSQLiteDatabase(Database.makeFromDirectory(dbName), dbName + ".db");
+                System.out.println("... Created Naive database for database number " + (USE_TEST_TABLE ? "TEST" : i));
+            } else System.out.println("... Naive database for database number " + (USE_TEST_TABLE ? "TEST" : i) + " already exists, skipping creation");
         }
 
         List<QueryRunner> queryRunners = Arrays.asList(new NaiveRunner(), new AggOneRunner(), new AggTwoRunner());
@@ -26,7 +29,7 @@ public class Benchmarker {
         experiment:
         for (QueryRunner runner : queryRunners) {
             long experimentStart = System.currentTimeMillis();
-            for (int i = 1; i <= NUM_OF_SCALES; ++i) {
+            for (int i = 1; i <= (USE_TEST_TABLE ? 1 : NUM_OF_SCALES); ++i) {
                 GCAndWait();
                 runner.runQueryAll(i);
                 GCAndWait();

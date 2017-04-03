@@ -5,13 +5,15 @@ import org.candidate697229.database.Database;
 
 import java.util.Arrays;
 
+import static org.candidate697229.config.Configuration.USE_TEST_TABLE;
+
 class AggOneRunner implements QueryRunner {
     private boolean debug = true;
 
     @Override
     public long runQueryAll(int database) {
         long start = System.currentTimeMillis();
-        long[] result = new AggOne(Database.makeFromDirectory("housing/housing-" + database)).computeAllAggregatesOfNaturalJoin();
+        long[] result = new AggOne(Database.makeFromDirectory(USE_TEST_TABLE ? "test-table" : "housing/housing-" + database)).computeAllAggregatesOfNaturalJoin();
         if (debug)
             System.out.println("RESULT\tAggOneRunner\t" + database + "\tAll\t" + Arrays.toString(result));
         return System.currentTimeMillis() - start;
@@ -20,7 +22,7 @@ class AggOneRunner implements QueryRunner {
     @Override
     public long runQueryOne(int database) {
         long start = System.currentTimeMillis();
-        long result = new AggOne(Database.makeFromDirectory("housing/housing-" + database)).computeOneAggregateOfNaturalJoin();
+        long result = new AggOne(Database.makeFromDirectory(USE_TEST_TABLE ? "test-table" : "housing/housing-" + database)).computeOneAggregateOfNaturalJoin();
         if (debug)
             System.out.println("RESULT\tAggOneRunner\t" + database + "\tOne\t[" + result + "]");
         return System.currentTimeMillis() - start;
