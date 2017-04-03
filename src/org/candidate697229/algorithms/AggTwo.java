@@ -2,7 +2,6 @@ package org.candidate697229.algorithms;
 
 import org.candidate697229.database.Database;
 import org.candidate697229.database.Table;
-import org.candidate697229.util.ImmutablePair;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -10,16 +9,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class AggTwo {
-    private final Database database;
-    private final TrieJoin trieJoin;
     private final List<int[]> instructions;
+    private final TrieJoin trieJoin;
 
     public AggTwo(Database database) {
-        this.database = computeSumDatabase(database);
-        ImmutablePair<List<int[]>, List<int[]>> conditionAndInstructions = database.getConditionsAndInstructionsForSummedDatabase();
-        trieJoin = new TrieJoin(this.database, conditionAndInstructions.getFirst());
+        instructions = database.getInstructionsForSummedDatabase();
+        trieJoin = new TrieJoin(computeSumDatabase(database));
         trieJoin.init();
-        instructions = conditionAndInstructions.getSecond();
     }
 
     public long[] computeAllAggregatesOfNaturalJoin() {

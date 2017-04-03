@@ -1,7 +1,6 @@
 package org.candidate697229.algorithms;
 
 import org.candidate697229.database.Database;
-import org.candidate697229.util.ImmutablePair;
 
 import java.util.List;
 
@@ -11,10 +10,9 @@ public class AggOne {
     private long[] result;
 
     public AggOne(Database database) {
-        ImmutablePair<List<int[]>, List<int[]>> joinConditionsAndAllPairs = database.getJoinConditionsAndAllPairs();
-        trieJoin = new TrieJoin(database, joinConditionsAndAllPairs.getFirst());
+        distinctPairs = database.getAllPairs();
+        trieJoin = new TrieJoin(database);
         trieJoin.init();
-        distinctPairs = joinConditionsAndAllPairs.getSecond();
     }
 
     public long[] computeAllAggregatesOfNaturalJoin() {

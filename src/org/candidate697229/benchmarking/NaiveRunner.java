@@ -19,12 +19,12 @@ class NaiveRunner implements QueryRunner {
 
     @Override
     public long runQueryAll(int database) {
-        return timeQuery(database + 1, queryAll, "All");
+        return timeQuery(database, queryAll, "All");
     }
 
     @Override
     public long runQueryOne(int database) {
-        return timeQuery(database + 1, queryOne, "One");
+        return timeQuery(database, queryOne, "One");
     }
 
     private long timeQuery(int database, String query, String name) {

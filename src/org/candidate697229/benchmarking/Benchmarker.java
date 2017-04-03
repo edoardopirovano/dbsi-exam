@@ -4,7 +4,6 @@ import org.candidate697229.algorithms.Naive;
 import org.candidate697229.database.Database;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -14,33 +13,30 @@ public class Benchmarker {
     private static final int REPEATS_PER_SCALE = 4;
 
     public static void main(String[] args) {
-        System.out.println("Reading in data and creating Naive database to benchmark against");
-        ArrayList<Database> databases = new ArrayList<>();
+        System.out.println("Creating Naive database to benchmark against");
         for (int i = 1; i <= NUM_OF_SCALES; ++i) {
-            databases.add(Database.makeFromDirectory("housing/housing-" + i));
-            System.out.println("... Read in database number " + i);
             if (!new File("housing/housing-" + i + ".db").exists()) {
-                Naive.makeSQLiteDatabase(databases.get(i), "housing/housing-" + i + ".db");
+                Naive.makeSQLiteDatabase(Database.makeFromDirectory("housing/housing-" + i), "housing/housing-" + i + ".db");
                 System.out.println("... Created Naive database for database number " + i);
             } else System.out.println("... Naive database for database number " + i + " already exists, skipping creation");
         }
 
-        List<QueryRunner> queryRunners = Arrays.asList(new NaiveRunner(), new AggOneRunner(databases), new AggTwoRunner(databases));
+        List<QueryRunner> queryRunners = Arrays.asList(new NaiveRunner(), new AggOneRunner(), new AggTwoRunner());
 
         experiment:
         for (QueryRunner runner : queryRunners) {
             long experimentStart = System.currentTimeMillis();
             for (int i = 1; i <= NUM_OF_SCALES; ++i) {
                 GCAndWait();
-                runner.runQueryAll(i - 1);
+                runner.runQueryAll(i);
                 GCAndWait();
-                runner.runQueryOne(i - 1);
+                runner.runQueryOne(i);
                 long[] allAggregatesTimes = new long[REPEATS_PER_SCALE];
                 long[] oneAggregateTimes = new long[REPEATS_PER_SCALE];
                 for (int j = 0; j < REPEATS_PER_SCALE; ++j) {
-                    allAggregatesTimes[j] = runner.runQueryAll(i - 1);
+                    allAggregatesTimes[j] = runner.runQueryAll(i);
                     GCAndWait();
-                    oneAggregateTimes[j] = runner.runQueryOne(i - 1);
+                    oneAggregateTimes[j] = runner.runQueryOne(i);
                     GCAndWait();
                     if ((System.currentTimeMillis() - experimentStart) > (TIMEOUT_SECONDS * 1000L))
                         continue experiment;

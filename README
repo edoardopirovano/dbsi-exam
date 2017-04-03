@@ -4,7 +4,7 @@ To run the code, first ensure you have suitable versions of the Java Runtime Env
 And checking that the two version numbers are the same and at least 1.8 (this is the case on the lab machines).
 
 Now, make sure the lib directory, and wherever you will build the code are included in your CLASSPATH environment variable.
-This can be achieved by running the command (from the location of these files):
+This can be achieved by running the command (from the directory containing this file):
     CLASSPATH=$(pwd)/lib:($pwd)/build:$CLASSPATH
 
 Then, make the build directory and compile all classes into it by running:
@@ -23,4 +23,4 @@ The JRE used was that from OpenJDK 1.8, 64-bit version.
 
 Results for specific plots can be filtered out from this output, by running for example:
     cat exampleOutput | grep TIME | grep AggOneRunner | grep All
-To get the average times (in milliseconds) for computing all the aggregates using AggOne.
+To get the average times (in milliseconds) for computing all the aggregates using AggOne as the scale factor varies.

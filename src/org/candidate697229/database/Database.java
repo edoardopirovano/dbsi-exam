@@ -59,10 +59,10 @@ public class Database {
         return attributePairs;
     }
 
-    public ImmutablePair<List<int[]>, List<int[]>> getJoinConditionsAndAllPairs() {
+    public List<int[]> getAllPairs() {
         HashMap<String, List<int[]>> seenWhere = findAttributePositions();
         List<int[]> distinctAttributes = seenWhere.values().stream().map(x -> x.get(0)).collect(Collectors.toList());
-        List<int[]> joinConditions = makeJoinCondition(seenWhere);
+        checkJoinCondition(seenWhere);
 
         List<int[]> distinctPairs = new ArrayList<>();
         for (int j = 0; j < distinctAttributes.size(); ++j) {
@@ -74,17 +74,28 @@ public class Database {
             }
         }
 
-        return new ImmutablePair<>(joinConditions, distinctPairs);
+        return distinctPairs;
     }
 
-    private List<int[]> makeJoinCondition(HashMap<String, List<int[]>> seenWhere) {
+    /*
+     Verify that our simplifying assumption that we are joining precisely on the first fields
+     of each table does indeed hold.
+      */
+    private void checkJoinCondition(HashMap<String, List<int[]>> seenWhere) {
         List<int[]> joinConditions = new ArrayList<>();
         seenWhere.values().stream().filter(positions -> positions.size() > 1).forEach(positions -> {
             int[] first = positions.remove(0);
             for (int[] other : positions)
                 joinConditions.add(new int[]{first[0], first[1], other[0], other[1]});
         });
-        return joinConditions;
+        if (joinConditions.size() != tables.size() - 1)
+            throw new InternalError("Join condition is not precisely on first column of each table");
+        assert (joinConditions.size() == tables.size() - 1);
+        for (int i = 0; i < tables.size() - 1; ++i) {
+            if (joinConditions.get(i)[0] != 0 || joinConditions.get(i)[1] != 0
+                    || joinConditions.get(i)[2] != i + 1 || joinConditions.get(i)[3] != 0)
+                throw new InternalError("Join condition is not precisely on first column of each table");
+        }
     }
 
     private HashMap<String, List<int[]>> findAttributePositions() {
@@ -102,9 +113,8 @@ public class Database {
         return seenWhere;
     }
 
-    public ImmutablePair<List<int[]>, List<int[]>> getConditionsAndInstructionsForSummedDatabase() {
-        ImmutablePair<List<int[]>, List<int[]>> joinConditionAndPairs = getJoinConditionsAndAllPairs();
-        List<int[]> distinctPairs = joinConditionAndPairs.getSecond();
+    public List<int[]> getInstructionsForSummedDatabase() {
+        List<int[]> distinctPairs = getAllPairs();
         List<int[]> instructions = new ArrayList<>();
 
         for (int[] pair : distinctPairs) {
@@ -117,7 +127,7 @@ public class Database {
             instructions.add(instruction);
         }
 
-        return new ImmutablePair<>(joinConditionAndPairs.getFirst(), instructions);
+        return instructions;
     }
 
     private int calculatePosition(int k, int table) {

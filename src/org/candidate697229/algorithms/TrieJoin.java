@@ -2,38 +2,29 @@ package org.candidate697229.algorithms;
 
 import org.candidate697229.database.Database;
 import org.candidate697229.database.Table;
-import org.candidate697229.structures.BTree;
+import org.candidate697229.structures.BTreeIterator;
+import org.candidate697229.structures.Iterator;
+import org.candidate697229.structures.SequentialIterator;
 
 import java.util.ArrayList;
-import java.util.List;
 
 class TrieJoin {
-    private ArrayList<BTree<Long, long[]>> iterators;
+    private static final boolean USE_B_TREE = false;
+
+    private ArrayList<Iterator> iterators;
     private int k;
     private long[][] resultTuple;
     private long[] returnPositions;
 
-    TrieJoin(Database database, List<int[]> joinCondition) {
+    TrieJoin(Database database) {
         k = database.getTables().size();
         iterators = new ArrayList<>(k);
         for (Table table : database.getTables()) {
-            BTree<Long, long[]> tree = new BTree<>();
-            for (long[] tuple : table.getTuples())
-                tree.put(tuple[0], tuple);
-            tree.clearIterator();
-            iterators.add(tree);
+            if (USE_B_TREE) iterators.add(new BTreeIterator(table.getTuples()));
+            else iterators.add(new SequentialIterator(table.getTuples()));
         }
         resultTuple = new long[k][];
         returnPositions = new long[k];
-
-        /*
-         Verify that our simplifying assumption that we are joining precisely on the first fields
-         of each table does indeed hold.
-          */
-        assert (joinCondition.size() == k - 1);
-        for (int i = 0; i < k - 1; ++i)
-            assert (joinCondition.get(i)[0] == 0 && joinCondition.get(i)[1] == 0
-                    && joinCondition.get(i)[2] == i + 1 && joinCondition.get(i)[3] == 0);
     }
 
     private boolean atEnd = false;

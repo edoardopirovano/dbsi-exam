@@ -9,14 +9,14 @@ import java.util.Stack;
  *  - Adapted insertion to allow duplicate keys.
  *  - Introduced iteration methods.
  */
-public class BTree<Key extends Comparable<Key>, Value> {
+public class BTreeIterator implements Iterator {
     private static final int M = 4;
 
     private Node root;       // root of the B-tree
     private int height;      // height of the B-tree
 
     private Node curNode;
-    private int curIndex;
+    private int curIndex = 0;
     private boolean atEnd = false;
     private Stack<Integer> prevIndex = new Stack<>();
     private Stack<Node> prevNode = new Stack<>();
@@ -48,15 +48,11 @@ public class BTree<Key extends Comparable<Key>, Value> {
         }
     }
 
-    public BTree() {
+    public BTreeIterator(long[][] tuples) {
         root = new Node(0, 0);
-    }
-
-    public void clearIterator() {
+        for (long[] tuple : tuples)
+            put(tuple[0], tuple);
         curNode = root;
-        curIndex = 0;
-        prevIndex.clear();
-        atEnd = false;
         traverseDownLeft();
     }
 
@@ -79,14 +75,14 @@ public class BTree<Key extends Comparable<Key>, Value> {
     }
 
     public boolean isNextKeySame() {
-        Key previous = key();
+        long previous = key();
         next();
         boolean result = (!atEnd() && key() == previous);
         prev();
         return result;
     }
 
-    public void seek(Key key) {
+    public void seek(long key) {
         if (key == key())
             return;
         while (!prevIndex.empty() && less(curNode.children[curNode.m - 1].key, key)) {
@@ -115,7 +111,7 @@ public class BTree<Key extends Comparable<Key>, Value> {
     }
 
     private void goToFirst() {
-        Key key = key();
+        long key = key();
         while (eq(key, key()))
             prev();
         next();
@@ -146,8 +142,7 @@ public class BTree<Key extends Comparable<Key>, Value> {
         return atEnd;
     }
 
-    public void put(Key key, Value val) {
-        if (key == null) throw new IllegalArgumentException("argument key to put() is null");
+    private void put(long key, long[] val) {
         Node u = insert(root, key, val, height);
         if (u == null) return;
 
@@ -159,7 +154,7 @@ public class BTree<Key extends Comparable<Key>, Value> {
         height++;
     }
 
-    private Node insert(Node h, Key key, Value val, int ht) {
+    private Node insert(Node h, long key, long[] val, int ht) {
         int j;
         Entry t = new Entry(key, val, null);
 
@@ -199,13 +194,13 @@ public class BTree<Key extends Comparable<Key>, Value> {
 
 
     @SuppressWarnings("unchecked")
-    public Key key() {
-        return (Key) curNode.children[curIndex].key;
+    public long key() {
+        return (long) curNode.children[curIndex].key;
     }
 
     @SuppressWarnings("unchecked")
-    public Value value() {
-        return (Value) curNode.children[curIndex].val;
+    public long[] value() {
+        return (long[]) curNode.children[curIndex].val;
     }
 
     @SuppressWarnings("unchecked")
