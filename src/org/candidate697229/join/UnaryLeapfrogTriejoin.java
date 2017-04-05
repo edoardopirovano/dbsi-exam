@@ -12,7 +12,6 @@ import java.util.List;
  */
 class UnaryLeapfrogTriejoin {
     private final Iterator[] iterators;
-    private int k;
     private boolean atEnd;
     private int p = 0;
 
@@ -22,7 +21,6 @@ class UnaryLeapfrogTriejoin {
      */
     UnaryLeapfrogTriejoin(List<Iterator> iterators) {
         this.iterators = iterators.toArray(new Iterator[0]);
-        k = iterators.size();
     }
 
     /**
@@ -31,8 +29,8 @@ class UnaryLeapfrogTriejoin {
      */
     private void init() {
         atEnd = false;
-        for (int i = 0; i < k; ++i) {
-            if (iterators[i].atEnd())
+        for (Iterator iterator : iterators) {
+            if (iterator.atEnd())
                 atEnd = true;
         }
         if (!atEnd)
@@ -44,7 +42,7 @@ class UnaryLeapfrogTriejoin {
      * if no such join result can be found.
      */
     private void leapfrogSearch() {
-        long x1 = iterators[Math.floorMod(p - 1, k)].key();
+        long x1 = iterators[Math.floorMod(p - 1, iterators.length)].key();
         while (true) {
             long x = iterators[p].key();
             if (x == x1) {
@@ -56,7 +54,7 @@ class UnaryLeapfrogTriejoin {
                     return;
                 } else {
                     x1 = iterators[p].key();
-                    p = Math.floorMod(p + 1, k);
+                    p = Math.floorMod(p + 1, iterators.length);
                 }
             }
         }
@@ -70,7 +68,7 @@ class UnaryLeapfrogTriejoin {
         if (iterators[p].atEnd())
             atEnd = true;
         else {
-            p = Math.floorMod(p + 1, k);
+            p = Math.floorMod(p + 1, iterators.length);
             leapfrogSearch();
         }
     }
