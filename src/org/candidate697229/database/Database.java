@@ -106,14 +106,16 @@ public class Database {
     }
 
     public List<List<int[]>> getAllExplicitJoinConditions() {
-        return findAttributePositions().values().stream().sorted((variable1, variable2) -> {
-            for (int[] positionOne : variable1) {
-                for (int[] positionTwo : variable2) {
-                    if (positionOne[0] == positionTwo[0])
-                        return Integer.compare(positionOne[1], positionTwo[1]);
-                }
-            }
-            return Integer.compare(variable2.size(), variable1.size());
-        }).collect(Collectors.toList());
+        return findAttributePositions().values().stream()
+                .filter(positions -> positions.size() > 1)
+                .sorted((positionsOne, positionsTwo) -> {
+                    for (int[] positionOne : positionsOne) {
+                        for (int[] positionTwo : positionsTwo) {
+                            if (positionOne[0] == positionTwo[0])
+                                return Integer.compare(positionOne[1], positionTwo[1]);
+                        }
+                    }
+                    return Integer.compare(positionsTwo.size(), positionsOne.size());
+            }).collect(Collectors.toList());
     }
 }

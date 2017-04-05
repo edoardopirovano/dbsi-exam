@@ -14,4 +14,10 @@ public interface Iterator {
     void open();
 
     void up();
+
+    void nextInBlock();
+
+    boolean isNextInBlock();
+
+    void back(int numOfValues);
 }

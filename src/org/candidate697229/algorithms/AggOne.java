@@ -15,11 +15,13 @@ public class AggOne {
 
     public long[] computeAllAggregatesOfNaturalJoin() {
         result = new long[distinctPairs.length];
+        int[] perPostCode = new int[25001];
         while (!trieJoin.overallAtEnd()) {
             long[][] tuple = trieJoin.resultTuple();
             int agg = 0;
             for (int[] distinctPair : distinctPairs)
                 result[agg++] += calculateFromInstruction(distinctPair, tuple);
+            perPostCode[(int) tuple[0][0]]++;
             trieJoin.overallNext();
         }
         return result;

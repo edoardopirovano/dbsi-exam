@@ -25,7 +25,7 @@ public class Benchmarker {
             } else System.out.println("... Naive database for database number " + (USE_TEST_TABLE ? "TEST" : i) + " already exists, skipping creation");
         }
 
-        List<QueryRunner> queryRunners = Arrays.asList(new NaiveRunner(), new AggOneRunner(), new AggTwoRunner());
+        List<QueryRunner> queryRunners = Arrays.asList(/*new NaiveRunner(),*/ new AggOneRunner(), new AggTwoRunner());
 
         experiment:
         for (QueryRunner runner : queryRunners) {

@@ -36,14 +36,33 @@ public class SequentialIterator implements Iterator {
         return true;
     }
 
+    @Override
+    public boolean isNextInBlock() {
+        return isNextSameUpToDepth(depth + 1);
+    }
+
+    @Override
+    public void nextInBlock() {
+        position++;
+    }
+
     private boolean isNextInView() {
+        return isNextSameUpToDepth(depth);
+    }
+
+    private boolean isNextSameUpToDepth(int limitDepth) {
         if (position == tuples.length - 1)
             return false;
-        for (int i = 0; i < depth; ++i) {
+        for (int i = 0; i < limitDepth; ++i) {
             if (tuples[position][i] != tuples[position + 1][i])
                 return false;
         }
         return true;
+    }
+
+    public void back(int numOfValues) {
+        position -= numOfValues;
+        atEnd = false;
     }
 
     @Override

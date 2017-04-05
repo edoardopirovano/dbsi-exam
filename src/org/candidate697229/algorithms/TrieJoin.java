@@ -15,10 +15,12 @@ class TrieJoin {
     private long[][] resultTuple;
     private boolean overallAtEnd = false;
     private int depth = -1;
+    private int[] returnPositions;
 
     TrieJoin(Database database, List<List<int[]>> joinInstructions) {
         k = database.getRelations().size();
         iterators = new Iterator[k];
+        returnPositions = new int[k];
         for (int i = 0; i < k; ++i)
             iterators[i] = new SequentialIterator(database.getRelations().get(i).getTuples());
         resultTuple = new long[k][];
@@ -43,7 +45,26 @@ class TrieJoin {
         return overallAtEnd;
     }
 
-    void overallNext() { findNext(true);}
+    void overallNext() {
+        for (int i = 0; i < iterators.length; ++i) {
+            if (iterators[i].isNextInBlock()) {
+                iterators[i].nextInBlock();
+                returnPositions[i]++;
+                for (int j = 0; j < i; ++j) {
+                    if (returnPositions[j] > 0) rewind(j);
+                }
+                return;
+            }
+        }
+        for (int i = 0; i < iterators.length; ++i)
+            rewind(i);
+        findNext(true);
+    }
+
+    private void rewind(int i) {
+        iterators[i].back(returnPositions[i]);
+        returnPositions[i] = 0;
+    }
 
     private void findNext(boolean shouldAdvance) {
         do {
