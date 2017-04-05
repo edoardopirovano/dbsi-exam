@@ -2,64 +2,129 @@ package org.candidate697229.algorithms;
 
 import org.candidate697229.database.Database;
 import org.candidate697229.database.Relation;
+import org.candidate697229.join.LeapfrogTriejoin;
+import org.candidate697229.structures.Iterator;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class AggTwo {
+import static org.candidate697229.config.Configuration.USE_TEST_DATABASE;
+
+/**
+ * Implementation of aggregation with both improvements.
+ */
+public class AggTwo implements AggAlgorithm {
     private final List<int[]> instructions;
     private final int[] numberOfJoinAttributes;
-    private final TrieJoin trieJoin;
+    private final LeapfrogTriejoin leapfrogTriejoin;
+    private final long[][] summedTuple;
+    private final Iterator[] iterators;
 
-    public AggTwo(Database database) {
+    /**
+     * Construct a new instance of this algorithm.
+     * @param scaleFactor the scaleFactor to run on
+     */
+    public AggTwo(int scaleFactor) {
+        Database database = Database.makeFromDirectory(USE_TEST_DATABASE ? "test-table" : "housing/housing-" + scaleFactor);
         instructions = getInstructionsForSummedDatabase(database);
         numberOfJoinAttributes = new int[database.getRelations().size()];
-        trieJoin = new TrieJoin(computeSumDatabase(database), database.getAllExplicitJoinConditions());
-        trieJoin.init();
+        summedTuple = new long[database.getRelations().size()][];
+        leapfrogTriejoin = new LeapfrogTriejoin(database, database.getAllExplicitJoinConditions());
+        iterators = leapfrogTriejoin.getIterators();
+        leapfrogTriejoin.init();
+        for (int i = 0; i < database.getRelations().size(); ++i) {
+            Relation relation = database.getRelations().get(i);
+            List<List<int[]>> joinInstructions = database.getAllExplicitJoinConditions().stream()
+                    .filter(instructions -> instructions.size() > 1).collect(Collectors.toList());
+            for (List<int[]> positions : joinInstructions) {
+                for (int[] position : positions) {
+                    if (position[0] == i)
+                        numberOfJoinAttributes[i]++;
+                }
+            }
+            int numOfAttributes = relation.getAttributes().size();
+            summedTuple[i] = new long[numberOfJoinAttributes[i] + 1 + numOfAttributes +
+                    ((numOfAttributes * (numOfAttributes + 1)) / 2)];
+        }
     }
 
+    @Override
     public long[] computeAllAggregatesOfNaturalJoin() {
         long[] result = new long[instructions.size()];
-        while (!trieJoin.overallAtEnd()) {
-            long[][] tuple = trieJoin.resultTuple();
+        while (!leapfrogTriejoin.overallAtEnd()) {
+            calculateSummedTuple();
             long countProduct = 1;
-            for (int i = 0; i < tuple.length; ++i)
-                countProduct *= tuple[i][numberOfJoinAttributes[i]];
+            for (int i = 0; i < summedTuple.length; ++i)
+                countProduct *= summedTuple[i][numberOfJoinAttributes[i]];
             int pos = 0;
             for (int[] instruction : instructions)
-                result[pos++] += calculateFromInstruction(instruction, tuple, countProduct);
-            trieJoin.overallNext();
+                result[pos++] += calculateFromInstruction(instruction, countProduct);
+            leapfrogTriejoin.overallNext();
         }
         return result;
     }
 
-    private long calculateFromInstruction(int[] instruction, long[][] tuple, long countProduct) {
-        if (instruction[0] == 0)
-            return (countProduct / tuple[instruction[1]][numberOfJoinAttributes[instruction[1]]]) *
-                    tuple[instruction[1]][instruction[2] + numberOfJoinAttributes[instruction[1]]];
-        return ((countProduct / tuple[instruction[1]][numberOfJoinAttributes[instruction[1]]])
-                / tuple[instruction[3]][numberOfJoinAttributes[instruction[3]]])
-                * tuple[instruction[1]][instruction[2] + numberOfJoinAttributes[instruction[1]]]
-                * tuple[instruction[3]][instruction[4] + numberOfJoinAttributes[instruction[3]]];
-    }
-
+    @Override
     public long computeOneAggregateOfNaturalJoin() {
         long result = 0;
-        while (!trieJoin.overallAtEnd()) {
-            long[][] tuple = trieJoin.resultTuple();
+        while (!leapfrogTriejoin.overallAtEnd()) {
+            calculateSummedTuple();
             long countProduct = 1;
-            for (int i = 0; i < tuple.length; ++i)
-                countProduct *= tuple[i][numberOfJoinAttributes[i]];
-            result += calculateFromInstruction(instructions.get(0), tuple, countProduct);
-            trieJoin.overallNext();
+            for (int i = 0; i < summedTuple.length; ++i)
+                countProduct *= summedTuple[i][numberOfJoinAttributes[i]];
+            result += calculateFromInstruction(instructions.get(0), countProduct);
+            leapfrogTriejoin.overallNext();
         }
         return result;
+    }
+
+    private void calculateSummedTuple() {
+        for (int i = 0; i < iterators.length; ++i) {
+            boolean didChangeJoinKey = false;
+            for (int j = 0; j < numberOfJoinAttributes[i]; ++j) {
+                if (summedTuple[i][j] != iterators[i].value()[j]) {
+                    summedTuple[i][j] = iterators[i].value()[j];
+                    didChangeJoinKey = true;
+                }
+            }
+            if (!didChangeJoinKey)
+                continue;
+
+            for (int j = numberOfJoinAttributes[i]; j < summedTuple[i].length; ++j)
+                summedTuple[i][j] = 0;
+            while (true) {
+                long[] tuple = iterators[i].value();
+                int k = numberOfJoinAttributes[i];
+
+                summedTuple[i][k++]++;
+
+                for (long attribute : tuple) summedTuple[i][k++] += attribute;
+
+                for (int a = 0; a < tuple.length; a++) {
+                    for (int b = a; b < tuple.length; b++)
+                        summedTuple[i][k++] += tuple[a] * tuple[b];
+                }
+
+                if (!iterators[i].isNextInBlock())
+                    break;
+                iterators[i].nextInBlock();
+            }
+        }
+    }
+
+    private long calculateFromInstruction(int[] instruction, long countProduct) {
+        if (instruction[0] == 0)
+            return (countProduct / summedTuple[instruction[1]][numberOfJoinAttributes[instruction[1]]]) *
+                    summedTuple[instruction[1]][instruction[2] + numberOfJoinAttributes[instruction[1]]];
+        return ((countProduct / summedTuple[instruction[1]][numberOfJoinAttributes[instruction[1]]])
+                / summedTuple[instruction[3]][numberOfJoinAttributes[instruction[3]]])
+                * summedTuple[instruction[1]][instruction[2] + numberOfJoinAttributes[instruction[1]]]
+                * summedTuple[instruction[3]][instruction[4] + numberOfJoinAttributes[instruction[3]]];
     }
 
     private List<int[]> getInstructionsForSummedDatabase(Database database) {
-        List<int[]> distinctPairs = database.getAllPairsOfColums();
+        List<int[]> distinctPairs = database.getAllPairsOfAttributes();
         List<int[]> instructions = new ArrayList<>();
 
         for (int[] pair : distinctPairs) {
@@ -82,80 +147,5 @@ public class AggTwo {
         for (int i = 0; i < k; ++i)
             result += (tableSize - i);
         return result;
-    }
-
-    private Database computeSumDatabase(Database database) {
-        ArrayList<Relation> summedRelations = new ArrayList<>(database.getRelations().size());
-        int k = 0;
-        for (Relation relation : database.getRelations()) {
-            List<String> newAttributes = new ArrayList<>();
-            List<List<int[]>> joinInstructions = database.getAllExplicitJoinConditions().stream()
-                    .filter(instructions -> instructions.size() > 1).collect(Collectors.toList());
-            ArrayList<Integer> joinAttributes = new ArrayList<>();
-            for (List<int[]> positions : joinInstructions) {
-                for (int[] position : positions) {
-                    if (position[0] == k)
-                        joinAttributes.add(position[1]);
-                }
-            }
-            numberOfJoinAttributes[k] = joinAttributes.size();
-            joinAttributes.forEach(position -> newAttributes.add(relation.getAttributes().get(position)));
-            newAttributes.add("COUNT(" + relation.getName() + ")");
-            newAttributes.addAll(relation.getAttributes().stream()
-                    .map(attribute -> "SUM(" + attribute + ")")
-                    .collect(Collectors.toList())
-            );
-            List<int[]> pairs = new LinkedList<>();
-            for (int i = 0; i < relation.getAttributes().size(); ++i) {
-                for (int j = i; j < relation.getAttributes().size(); ++j)
-                    pairs.add(new int[]{i, j});
-            }
-            newAttributes.addAll(pairs.stream()
-                    .map(pair -> "SUM(" + relation.getAttributes().get(pair[0]) + "*" + relation.getAttributes().get(pair[1]) + ")")
-                    .collect(Collectors.toList())
-            );
-            Relation summedRelation = new Relation(relation.getName(), newAttributes);
-            LinkedList<long[]> tuples = new LinkedList<>();
-            long[] lastJoinKey = new long[joinAttributes.size()];
-            long[] currentTuple = new long[newAttributes.size()];
-            copyJoinKeys(relation.getTuples()[0], lastJoinKey, currentTuple, joinAttributes);
-            for (long[] tuple : relation.getTuples()) {
-                if (compareJoinKeys(tuple, lastJoinKey, joinAttributes)) {
-                    tuples.add(currentTuple);
-                    currentTuple = new long[currentTuple.length];
-                    copyJoinKeys(tuple, lastJoinKey, currentTuple, joinAttributes);
-                }
-                ++currentTuple[joinAttributes.size()];
-                for (int i = 0; i < tuple.length; ++i)
-                    currentTuple[i + 1 + joinAttributes.size()] += tuple[i];
-                int pos = tuple.length + 1 + joinAttributes.size();
-                for (int[] pair : pairs)
-                    currentTuple[pos++] += tuple[pair[0]] * tuple[pair[1]];
-            }
-            tuples.add(currentTuple);
-            long[][] newTuples = new long[tuples.size()][];
-            int i = 0;
-            for (long[] tuple : tuples)
-                newTuples[i++] = tuple;
-            summedRelation.putTuples(newTuples);
-            summedRelations.add(summedRelation);
-            ++k;
-        }
-        return new Database(summedRelations);
-    }
-
-    private boolean compareJoinKeys(long[] tuple, long[] lastJoinKey, List<Integer> joinAttributes) {
-        for (int i : joinAttributes) {
-            if (tuple[i] != lastJoinKey[i])
-                return true;
-        }
-        return false;
-    }
-
-    private void copyJoinKeys(long[] tuple, long[] lastJoinKey, long[] currentTuple, List<Integer> joinKeys) {
-        for (int i : joinKeys) {
-            lastJoinKey[i] = tuple[i];
-            currentTuple[i] = tuple[i];
-        }
     }
 }

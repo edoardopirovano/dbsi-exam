@@ -1,36 +1,31 @@
 package org.candidate697229.benchmarking;
 
-import org.candidate697229.algorithms.Naive;
 import org.candidate697229.database.Database;
+import org.candidate697229.util.SQLiteHelper;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.candidate697229.config.Configuration.USE_TEST_TABLE;
+import static org.candidate697229.config.Configuration.*;
 
 public class Benchmarker {
-    private static final int NUM_OF_SCALES = 20;
-    private static final int TIMEOUT_SECONDS = 900; // 15 minutes
-    private static final int REPEATS_PER_SCALE = 1;
-
     public static void main(String[] args) {
         System.out.println("Creating Naive database to benchmark against");
-        for (int i = 1; i <= (USE_TEST_TABLE ? 1 : NUM_OF_SCALES); ++i) {
-            String dbName = (USE_TEST_TABLE ? "test-table" : "housing/housing-" + i);
-            if (USE_TEST_TABLE || !new File(dbName + ".db").exists()) {
-                if (USE_TEST_TABLE) new File(dbName + ".db").delete();
-                Naive.makeSQLiteDatabase(Database.makeFromDirectory(dbName), dbName + ".db");
-                System.out.println("... Created Naive database for database number " + (USE_TEST_TABLE ? "TEST" : i));
-            } else System.out.println("... Naive database for database number " + (USE_TEST_TABLE ? "TEST" : i) + " already exists, skipping creation");
+        for (int i = 1; i <= (USE_TEST_DATABASE ? 1 : NUM_OF_SCALES); ++i) {
+            String dbName = (USE_TEST_DATABASE ? "test-table" : "housing/housing-" + i);
+            if (!new File(dbName + ".db").exists()) {
+                SQLiteHelper.makeSQLiteDatabase(Database.makeFromDirectory(dbName), dbName + ".db");
+                System.out.println("... Created Naive database for database number " + (USE_TEST_DATABASE ? "TEST" : i));
+            } else System.out.println("... Naive database for database number " + (USE_TEST_DATABASE ? "TEST" : i) + " already exists, skipping creation");
         }
 
-        List<QueryRunner> queryRunners = Arrays.asList(/*new NaiveRunner(),*/ new AggOneRunner(), new AggTwoRunner());
+        List<QueryRunner> queryRunners = Arrays.asList(new NaiveRunner(), new AggOneRunner(), new AggTwoRunner());
 
         experiment:
         for (QueryRunner runner : queryRunners) {
             long experimentStart = System.currentTimeMillis();
-            for (int i = 1; i <= (USE_TEST_TABLE ? 1 : NUM_OF_SCALES); ++i) {
+            for (int i = 1; i <= (USE_TEST_DATABASE ? 1 : NUM_OF_SCALES); ++i) {
                 GCAndWait();
                 runner.runQueryAll(i);
                 GCAndWait();

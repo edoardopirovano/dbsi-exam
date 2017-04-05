@@ -4,63 +4,48 @@ import org.candidate697229.database.Database;
 import org.candidate697229.database.Relation;
 
 import java.sql.*;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.stream.Collectors;
 
-public class Naive {
+import static org.candidate697229.config.Configuration.USE_TEST_DATABASE;
 
-    public static void makeSQLiteDatabase(Database database, String name) {
-        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + name)) {
-            if (conn != null) database.getRelations().forEach(relation -> makeTable(conn, relation));
-            else throw new InternalError("Invalid database connection.");
-        } catch (SQLException e) {
-            throw new InternalError(e);
-        }
+public class Naive implements AggAlgorithm {
+    private final int scaleFactor;
+
+    /**
+     *
+     * @param scaleFactor the scaleFactor to run on
+     */
+    public Naive(int scaleFactor) {
+        this.scaleFactor = scaleFactor;
     }
 
-    private static void makeTable(Connection conn, Relation relation) {
-        try {
-            Statement createTable = conn.createStatement();
-            createTable.execute("CREATE TABLE " + relation.getName() + " (" +
-                    relation.getAttributes().stream()
-                            .map(attribute -> attribute + " BIGINT NOT NULL")
-                            .collect(Collectors.joining(", "))
-                    + ");");
-
-            StringBuilder insertSql = new StringBuilder("INSERT INTO " + relation.getName() + "(");
-            insertSql.append(String.join(",", relation.getAttributes()));
-            insertSql.append(") VALUES ");
-            long[][] tuples = relation.getTuples();
-            for (long[] tuple : tuples) {
-                insertSql.append("(");
-                for (int j = 0; j < tuple.length - 1; ++j)
-                    insertSql.append(tuple[j]).append(",");
-                insertSql.append(tuple[tuple.length - 1]).append("),");
-            }
-            insertSql.deleteCharAt(insertSql.lastIndexOf(",")).append(";");
-            Statement insertValues = conn.createStatement();
-            insertValues.execute(insertSql.toString());
-        } catch (SQLException e) {
-            throw new InternalError(e);
-        }
+    @Override
+    public long[] computeAllAggregatesOfNaturalJoin() {
+        return runQuery(USE_TEST_DATABASE ? "test-table.db" : "housing/housing-" + scaleFactor + ".db", buildQueryAll());
     }
 
-    public static List<Long> runQuery(String database, String query) {
-        List<Long> result = new LinkedList<>();
+    @Override
+    public long computeOneAggregateOfNaturalJoin() {
+        return runQuery(USE_TEST_DATABASE ? "test-table.db" : "housing/housing-" + scaleFactor + ".db", buildQueryOne())[0];
+    }
+
+    private long[] runQuery(String database, String query) {
+        long[] result;
         try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + database);
              Statement statement = conn.createStatement();
              ResultSet rs = statement.executeQuery(query)) {
             rs.next();
+            result = new long[rs.getMetaData().getColumnCount()];
             for (int i = 1; i <= rs.getMetaData().getColumnCount(); ++i)
-                result.add(rs.getLong(i));
+                result[i - 1] = rs.getLong(i);
         } catch (SQLException e) {
             throw new InternalError(e);
         }
         return result;
     }
 
-    public static String buildQueryAll(Database database) {
+    private String buildQueryAll() {
+        Database database = Database.makeFromDirectory(USE_TEST_DATABASE ? "test-table" : "housing/housing-" + scaleFactor, false);
         StringBuilder query = new StringBuilder("SELECT ");
         database.getAttributeNamePairs().forEach(attributePair -> query
                 .append("SUM(")
@@ -72,7 +57,8 @@ public class Naive {
         return query.toString();
     }
 
-    public static String buildQueryOne(Database database) {
+    private String buildQueryOne() {
+        Database database = Database.makeFromDirectory(USE_TEST_DATABASE ? "test-table" : "housing/housing-" + scaleFactor, false);
         StringBuilder query = new StringBuilder("SELECT SUM(");
         query.append(database.getRelations().get(0).getAttributes().get(0))
                 .append("*")
@@ -82,7 +68,7 @@ public class Naive {
         return query.toString();
     }
 
-    private static void buildNaturalJoin(Database database, StringBuilder query) {
+    private void buildNaturalJoin(Database database, StringBuilder query) {
         query.append(" FROM ")
                 .append(database.getRelations().stream()
                         .map(Relation::getName)

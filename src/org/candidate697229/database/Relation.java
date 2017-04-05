@@ -11,7 +11,7 @@ public class Relation {
     private List<String> attributes;
     private long[][] tuples;
 
-    public Relation(String name, List<String> attributes) {
+    Relation(String name, List<String> attributes) {
         this.name = name;
         this.attributes = attributes;
     }

@@ -6,20 +6,35 @@ import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.candidate697229.config.Configuration.USE_TEST_TABLE;
+import static org.candidate697229.config.Configuration.USE_TEST_DATABASE;
 
+/**
+ * Class representing a database (set of relations).
+ */
 public class Database {
-    private ArrayList<Relation> relations;
+    private List<Relation> relations;
 
-    public Database(ArrayList<Relation> relations) {
+    /**
+     * Create a database.
+     * @param relations the relations in the database (need not be populate with tuples yet)
+     */
+    private Database(List<Relation> relations) {
         this.relations = relations;
     }
 
+    /**
+     * Read in a database matching the schema in the relations from a directory containing a .tbl for each relation.
+     * @param directoryName the directory to read the databse from
+     */
     private void readFromDirectory(String directoryName) {
         relations.forEach(relation -> relation.readFromFile(new File(directoryName, relation.getName() + ".tbl")));
     }
 
-    public ArrayList<Relation> getRelations() {
+    /**
+     * Get the relations in the database.
+     * @return the list of relations in the database
+     */
+    public List<Relation> getRelations() {
         return relations;
     }
 
@@ -27,13 +42,23 @@ public class Database {
         return makeFromDirectory(directoryName, true);
     }
 
+    /**
+     * Make a database from a directory.
+     * @param directoryName the directory to read in the database from
+     * @param shouldPopulate whether or not to read in tuples (if not, returns an empty database wwith the correct schema)
+     * @return the database read in
+     */
     public static Database makeFromDirectory(String directoryName, boolean shouldPopulate) {
-        Database database = new Database(USE_TEST_TABLE ? testTables() : housingTables());
+        Database database = new Database(USE_TEST_DATABASE ? testTables() : housingTables());
         if (shouldPopulate)
             database.readFromDirectory(directoryName);
         return database;
     }
 
+    /**
+     * Get the relations in the housing database.
+     * @return the relations in the housing database (not populated with tuples)
+     */
     private static ArrayList<Relation> housingTables() {
         ArrayList<Relation> relations = new ArrayList<>(6);
         relations.add(new Relation("House", Arrays.asList("postcode", "area", "price", "bedrooms", "bathrooms",
@@ -49,6 +74,10 @@ public class Database {
         return relations;
     }
 
+    /**
+     * Get the relations in the test database.
+     * @return the relations in the test database (not populated with tuples)
+     */
     private static ArrayList<Relation> testTables() {
         ArrayList<Relation> relations = new ArrayList<>(4);
         relations.add(new Relation("R1", Arrays.asList("A","B","C")));
@@ -74,7 +103,7 @@ public class Database {
         return attributePairs;
     }
 
-    public List<int[]> getAllPairsOfColums() {
+    public List<int[]> getAllPairsOfAttributes() {
         HashMap<String, List<int[]>> seenWhere = findAttributePositions();
         List<int[]> distinctAttributes = seenWhere.values().stream().map(x -> x.get(0)).collect(Collectors.toList());
 
