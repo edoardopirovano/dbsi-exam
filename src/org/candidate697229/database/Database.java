@@ -6,7 +6,7 @@ import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.candidate697229.config.Configuration.USE_TEST_DATABASE;
+import static org.candidate697229.util.Configuration.USE_TEST_DATABASE;
 
 /**
  * Class representing a database (set of relations).
@@ -23,21 +23,10 @@ public class Database {
     }
 
     /**
-     * Read in a database matching the schema in the relations from a directory containing a .tbl for each relation.
-     * @param directoryName the directory to read the databse from
+     * Make a database from a directory, including populating it with tuples.
+     * @param directoryName the directory to read in the database from
+     * @return the database read in
      */
-    private void readFromDirectory(String directoryName) {
-        relations.forEach(relation -> relation.readFromFile(new File(directoryName, relation.getName() + ".tbl")));
-    }
-
-    /**
-     * Get the relations in the database.
-     * @return the list of relations in the database
-     */
-    public List<Relation> getRelations() {
-        return relations;
-    }
-
     public static Database makeFromDirectory(String directoryName) {
         return makeFromDirectory(directoryName, true);
     }
@@ -87,6 +76,29 @@ public class Database {
         return relations;
     }
 
+    /**
+     * Read in a database matching the schema in the relations from a directory containing a .tbl for each relation.
+     *
+     * @param directoryName the directory to read the databse from
+     */
+    private void readFromDirectory(String directoryName) {
+        relations.forEach(relation -> relation.readFromFile(new File(directoryName, relation.getName() + ".tbl")));
+    }
+
+    /**
+     * Get the relations in the database.
+     *
+     * @return the list of relations in the database
+     */
+    public List<Relation> getRelations() {
+        return relations;
+    }
+
+    /**
+     * Get all pairs of attribute names in the database (symmetric pairs appear only once).
+     *
+     * @return a list of pairs of attribute names
+     */
     public List<ImmutablePair<String, String>> getAttributeNamePairs() {
         List<String> attributes = getRelations().stream()
                 .flatMap(relation -> relation.getAttributes().stream())
@@ -103,23 +115,33 @@ public class Database {
         return attributePairs;
     }
 
+    /**
+     * Find all pairs of attributes in the database (symmetric pairs appear only once).
+     * @return a list of 4-tuples with elements 0 and 1 representing the relation and position within that relation for
+     *          the first attribute in the pair, and elements 2 and 3 representing the same for the second attribute
+     */
     public List<int[]> getAllPairsOfAttributes() {
         HashMap<String, List<int[]>> seenWhere = findAttributePositions();
         List<int[]> distinctAttributes = seenWhere.values().stream().map(x -> x.get(0)).collect(Collectors.toList());
 
-        List<int[]> distinctPairs = new ArrayList<>();
+        List<int[]> attributePairs = new ArrayList<>();
         for (int j = 0; j < distinctAttributes.size(); ++j) {
             int[] firstAttribute = distinctAttributes.get(j);
             for (int k = j; k < distinctAttributes.size(); ++k) {
                 int[] secondAttribute = distinctAttributes.get(k);
-                distinctPairs.add(new int[]{firstAttribute[0], firstAttribute[1],
+                attributePairs.add(new int[]{firstAttribute[0], firstAttribute[1],
                             secondAttribute[0], secondAttribute[1]});
             }
         }
 
-        return distinctPairs;
+        return attributePairs;
     }
 
+    /**
+     * Find where each attribute appears in the database.
+     * @return a map from each attribute name to a list of positions it appears in, where each position takes the form
+     *          of a pair of integer giving the relation and attribute within that relation
+     */
     private HashMap<String, List<int[]>> findAttributePositions() {
         HashMap<String, List<int[]>> seenWhere = new LinkedHashMap<>();
         for (int i = 0; i < relations.size(); ++i) {
@@ -134,6 +156,11 @@ public class Database {
         return seenWhere;
     }
 
+    /**
+     * Get the explicit conditions in the natural join of the all the relations in this database.
+     * @return the explicit join conditions, as a list of lists of pairs, with each pair of integers representing a
+     *          relation and attribute within that relation that should be equal to all others in the same list
+     */
     public List<List<int[]>> getAllExplicitJoinConditions() {
         return findAttributePositions().values().stream()
                 .filter(positions -> positions.size() > 1)

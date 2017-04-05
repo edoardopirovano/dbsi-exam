@@ -15,9 +15,9 @@ Finally, run the benchmarker (which will run all three solutions in turn) with 8
     java -Xmx8G org.candidate697229.benchmarking.Benchmarker
 
 As provided, the code will timeout after 15 minutes for each solution, which will likely only give the final solution enough time to complete with every scale factor.
-The TIMEOUT_SECONDS constant in Benchmarker.java can be changed to vary this timeout.
+The TIMEOUT_SECONDS constant in Configuration.java can be changed to vary this timeout.
 
-The exampleOutput file contains example output obtained by running the program with a timeout of 2 hours per solution.
+The exampleOutput file contains example output obtained by running the program with longer timeout.
 This was obtained on a computer with Ubuntu 16.04, an Intel i7-4980HQ processor and 16GB of memory (of which 8GB was given as a heap limit to the JRE).
 The JRE used was that from OpenJDK 1.8, 64-bit version.
 

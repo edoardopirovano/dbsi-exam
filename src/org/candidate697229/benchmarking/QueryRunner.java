@@ -4,7 +4,7 @@ import org.candidate697229.algorithms.AggAlgorithm;
 
 import java.util.Arrays;
 
-import static org.candidate697229.config.Configuration.OUTPUT_RESULTS;
+import static org.candidate697229.util.Configuration.OUTPUT_RESULTS;
 
 /**
  * Abstract class describing a class that can run and time queries.

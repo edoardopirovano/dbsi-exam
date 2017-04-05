@@ -3,8 +3,9 @@ package org.candidate697229.algorithms;
 import org.candidate697229.database.Database;
 import org.candidate697229.join.LeapfrogTriejoin;
 import org.candidate697229.structures.Iterator;
+import org.candidate697229.structures.SequentialIterator;
 
-import static org.candidate697229.config.Configuration.USE_TEST_DATABASE;
+import static org.candidate697229.util.Configuration.USE_TEST_DATABASE;
 
 /**
  * Implementation of aggregation with the first improvement.
@@ -22,10 +23,11 @@ public class AggOne implements AggAlgorithm {
     public AggOne(int scaleFactor) {
         Database database = Database.makeFromDirectory(USE_TEST_DATABASE ? "test-table" : "housing/housing-" + scaleFactor);
         distinctPairs = database.getAllPairsOfAttributes().toArray(new int[0][]);
-        leapfrogTriejoin = new LeapfrogTriejoin(database, database.getAllExplicitJoinConditions());
-        iterators = leapfrogTriejoin.getIterators();
+        iterators = new Iterator[database.getRelations().size()];
+        for (int i = 0; i < database.getRelations().size(); ++i)
+            iterators[i] = new SequentialIterator(database.getRelations().get(i).getTuples());
+        leapfrogTriejoin = new LeapfrogTriejoin(iterators, database.getAllExplicitJoinConditions());
         returnPositions = new int[iterators.length];
-        leapfrogTriejoin.init();
     }
 
     @Override

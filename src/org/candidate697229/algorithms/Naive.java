@@ -2,17 +2,20 @@ package org.candidate697229.algorithms;
 
 import org.candidate697229.database.Database;
 import org.candidate697229.database.Relation;
+import org.candidate697229.util.SQLiteHelper;
 
-import java.sql.*;
 import java.util.stream.Collectors;
 
-import static org.candidate697229.config.Configuration.USE_TEST_DATABASE;
+import static org.candidate697229.util.Configuration.USE_TEST_DATABASE;
 
+/**
+ * Implementation of aggregation using a naive SQLite database.
+ */
 public class Naive implements AggAlgorithm {
     private final int scaleFactor;
 
     /**
-     *
+     * Create an instance of this algorithm.
      * @param scaleFactor the scaleFactor to run on
      */
     public Naive(int scaleFactor) {
@@ -21,29 +24,19 @@ public class Naive implements AggAlgorithm {
 
     @Override
     public long[] computeAllAggregatesOfNaturalJoin() {
-        return runQuery(USE_TEST_DATABASE ? "test-table.db" : "housing/housing-" + scaleFactor + ".db", buildQueryAll());
+        return SQLiteHelper.runQuery(USE_TEST_DATABASE ? "test-table.db" : "housing/housing-" + scaleFactor + ".db", buildQueryAll());
     }
 
     @Override
     public long computeOneAggregateOfNaturalJoin() {
-        return runQuery(USE_TEST_DATABASE ? "test-table.db" : "housing/housing-" + scaleFactor + ".db", buildQueryOne())[0];
+        return SQLiteHelper.runQuery(USE_TEST_DATABASE ? "test-table.db" : "housing/housing-" + scaleFactor + ".db", buildQueryOne())[0];
     }
 
-    private long[] runQuery(String database, String query) {
-        long[] result;
-        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + database);
-             Statement statement = conn.createStatement();
-             ResultSet rs = statement.executeQuery(query)) {
-            rs.next();
-            result = new long[rs.getMetaData().getColumnCount()];
-            for (int i = 1; i <= rs.getMetaData().getColumnCount(); ++i)
-                result[i - 1] = rs.getLong(i);
-        } catch (SQLException e) {
-            throw new InternalError(e);
-        }
-        return result;
-    }
-
+    /**
+     * Build a query for computing all aggregates.
+     *
+     * @return a SQL query for computing the sum of all products of pairs of attributes in the table
+     */
     private String buildQueryAll() {
         Database database = Database.makeFromDirectory(USE_TEST_DATABASE ? "test-table" : "housing/housing-" + scaleFactor, false);
         StringBuilder query = new StringBuilder("SELECT ");
@@ -57,6 +50,10 @@ public class Naive implements AggAlgorithm {
         return query.toString();
     }
 
+    /**
+     * Build a query for computing one aggregate.
+     * @return a SQL query for computing the sum of a products of pairs of attributes in the table
+     */
     private String buildQueryOne() {
         Database database = Database.makeFromDirectory(USE_TEST_DATABASE ? "test-table" : "housing/housing-" + scaleFactor, false);
         StringBuilder query = new StringBuilder("SELECT SUM(");
@@ -68,6 +65,11 @@ public class Naive implements AggAlgorithm {
         return query.toString();
     }
 
+    /**
+     * Append the natural join of all tables to the end of a SQL query.
+     * @param database the database to get the tables from
+     * @param query the query to append to
+     */
     private void buildNaturalJoin(Database database, StringBuilder query) {
         query.append(" FROM ")
                 .append(database.getRelations().stream()

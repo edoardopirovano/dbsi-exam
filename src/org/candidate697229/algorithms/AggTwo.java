@@ -4,12 +4,13 @@ import org.candidate697229.database.Database;
 import org.candidate697229.database.Relation;
 import org.candidate697229.join.LeapfrogTriejoin;
 import org.candidate697229.structures.Iterator;
+import org.candidate697229.structures.SequentialIterator;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.candidate697229.config.Configuration.USE_TEST_DATABASE;
+import static org.candidate697229.util.Configuration.USE_TEST_DATABASE;
 
 /**
  * Implementation of aggregation with both improvements.
@@ -30,9 +31,10 @@ public class AggTwo implements AggAlgorithm {
         instructions = getInstructionsForSummedDatabase(database);
         numberOfJoinAttributes = new int[database.getRelations().size()];
         summedTuple = new long[database.getRelations().size()][];
-        leapfrogTriejoin = new LeapfrogTriejoin(database, database.getAllExplicitJoinConditions());
-        iterators = leapfrogTriejoin.getIterators();
-        leapfrogTriejoin.init();
+        iterators = new Iterator[database.getRelations().size()];
+        for (int i = 0; i < database.getRelations().size(); ++i)
+            iterators[i] = new SequentialIterator(database.getRelations().get(i).getTuples());
+        leapfrogTriejoin = new LeapfrogTriejoin(iterators, database.getAllExplicitJoinConditions());
         for (int i = 0; i < database.getRelations().size(); ++i) {
             Relation relation = database.getRelations().get(i);
             List<List<int[]>> joinInstructions = database.getAllExplicitJoinConditions().stream()
@@ -79,8 +81,15 @@ public class AggTwo implements AggAlgorithm {
         return result;
     }
 
+    /**
+     * For each relation, iterate over the tuples with the current join key, and compute the partial aggregates we will
+     * need into the two-dimensional array summedTuple.
+     */
     private void calculateSummedTuple() {
         for (int i = 0; i < iterators.length; ++i) {
+            /*
+             * Copy the join key into the start of the summed tuple, recording if it has changed or not
+             */
             boolean didChangeJoinKey = false;
             for (int j = 0; j < numberOfJoinAttributes[i]; ++j) {
                 if (summedTuple[i][j] != iterators[i].value()[j]) {
@@ -88,19 +97,38 @@ public class AggTwo implements AggAlgorithm {
                     didChangeJoinKey = true;
                 }
             }
+
+            /*
+             * If the join key hasn't changed for this relation, we needn't recompute the partial aggregates,
+             * so we can just move on to the next relation.
+             */
             if (!didChangeJoinKey)
                 continue;
 
+            /*
+             * Reset the COUNT and all the SUMs to 0.
+             */
             for (int j = numberOfJoinAttributes[i]; j < summedTuple[i].length; ++j)
                 summedTuple[i][j] = 0;
+
             while (true) {
                 long[] tuple = iterators[i].value();
                 int k = numberOfJoinAttributes[i];
 
+                /*
+                 * Increment the COUNT by one.
+                 */
                 summedTuple[i][k++]++;
 
+                /*
+                 * Adjust all aggregates of the form SUM(A) for a single attribute A.
+                 */
                 for (long attribute : tuple) summedTuple[i][k++] += attribute;
 
+
+                /*
+                 * Adjust all aggregates of the form SUM(A*B) for a pair of attributes A and B, with A preceding or equal to B.
+                 */
                 for (int a = 0; a < tuple.length; a++) {
                     for (int b = a; b < tuple.length; b++)
                         summedTuple[i][k++] += tuple[a] * tuple[b];
@@ -113,6 +141,18 @@ public class AggTwo implements AggAlgorithm {
         }
     }
 
+    /**
+     * Calculate the adjustment to make to an overall aggregate from an instruction.
+     * The instruction is an array that can take one of two forms:
+     * - It begins with a 0, then has a pair consisting of the two dimensions of the position in the summed tuple
+     * to multiply the count by after dividing it by the count in the relation this position corresponds to.
+     * - It begins with a 1, then has two pairs, giving the two positions in the summed tuple to multiply the
+     * count by after dividing it by the count in both relations these positions point to.
+     *
+     * @param instruction  the instruction to use to calculate the adjustment from the partial aggregates
+     * @param countProduct the product of all the COUNT aggregates for the current join key
+     * @return the adjustment to make to an overall aggregate
+     */
     private long calculateFromInstruction(int[] instruction, long countProduct) {
         if (instruction[0] == 0)
             return (countProduct / summedTuple[instruction[1]][numberOfJoinAttributes[instruction[1]]]) *
@@ -123,6 +163,12 @@ public class AggTwo implements AggAlgorithm {
                 * summedTuple[instruction[3]][instruction[4] + numberOfJoinAttributes[instruction[3]]];
     }
 
+    /**
+     * Get a list of instructions for calculating overall aggregates from the partial aggregates in a given database.
+     * @param database the database to consider
+     * @return a list of instructions
+     *          (for a description of the form these instructions take, see the calculateFromInstruction method above)
+     */
     private List<int[]> getInstructionsForSummedDatabase(Database database) {
         List<int[]> distinctPairs = database.getAllPairsOfAttributes();
         List<int[]> instructions = new ArrayList<>();
@@ -142,10 +188,16 @@ public class AggTwo implements AggAlgorithm {
         return instructions;
     }
 
-    private int calculatePosition(int k, int tableSize) {
+    /**
+     * Calculate the position at which the aggregate SUM(A*A) can be found in the tuple of partial aggregates.
+     * @param k the index of the relation A
+     * @param relationSize the size of the relation
+     * @return the position in the summed tuple for the relation at which SUM(A*A) can be found
+     */
+    private int calculatePosition(int k, int relationSize) {
         int result = 0;
         for (int i = 0; i < k; ++i)
-            result += (tableSize - i);
+            result += (relationSize - i);
         return result;
     }
 }

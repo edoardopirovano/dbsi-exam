@@ -7,9 +7,17 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.candidate697229.config.Configuration.*;
+import static org.candidate697229.util.Configuration.*;
 
+/**
+ * Class that benchmarks the three solutions and outputs timing information.
+ */
 public class Benchmarker {
+    /**
+     * Run the benchmarking script and output times in milliseconds.
+     *
+     * @param args ignored, does not accept any command-line arguments
+     */
     public static void main(String[] args) {
         System.out.println("Creating Naive database to benchmark against");
         for (int i = 1; i <= (USE_TEST_DATABASE ? 1 : NUM_OF_SCALES); ++i) {
@@ -46,6 +54,11 @@ public class Benchmarker {
         }
     }
 
+    /**
+     * Calculate an average of a tuple of times.
+     * @param times the times to average
+     * @return an average time, rounded down to the nearest integer
+     */
     private static long average(long[] times) {
         long sum = 0;
         for (long time : times)
@@ -66,7 +79,7 @@ public class Benchmarker {
         try {
             Thread.sleep(200);
         } catch (InterruptedException e) {
-            throw new InternalError(e);
+            throw new InternalError("Program interrupted while waiting for garbage collection", e);
         }
     }
 }
