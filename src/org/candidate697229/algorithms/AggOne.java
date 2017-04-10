@@ -15,6 +15,7 @@ public class AggOne implements AggAlgorithm {
     private final LeapfrogTriejoin leapfrogTriejoin;
     private final Iterator[] iterators;
     private int[] returnPositions;
+    private long[][] tuples;
 
     /**
      * Construction a new instance of this algorithm.
@@ -28,17 +29,18 @@ public class AggOne implements AggAlgorithm {
             iterators[i] = new SequentialIterator(database.getRelations().get(i).getTuples());
         leapfrogTriejoin = new LeapfrogTriejoin(iterators, database.getAllExplicitJoinConditions());
         returnPositions = new int[iterators.length];
+        tuples = new long[iterators.length][];
     }
 
     @Override
     public long[] computeAllAggregatesOfNaturalJoin() {
         long[] result = new long[distinctPairs.length];
 
+        copyAllTuples();
         while (!leapfrogTriejoin.overallAtEnd()) {
-            long[][] tuple = leapfrogTriejoin.resultTuple();
             int agg = 0;
             for (int[] distinctPair : distinctPairs)
-                result[agg++] += calculateFromInstruction(distinctPair, tuple);
+                result[agg++] += calculateFromInstruction(distinctPair);
             advanceToNextTuple();
         }
 
@@ -49,12 +51,21 @@ public class AggOne implements AggAlgorithm {
     public long computeOneAggregateOfNaturalJoin() {
         long result = 0;
 
+        copyAllTuples();
         while (!leapfrogTriejoin.overallAtEnd()) {
-            result += calculateFromInstruction(distinctPairs[0], leapfrogTriejoin.resultTuple());
+            result += calculateFromInstruction(distinctPairs[0]);
             advanceToNextTuple();
         }
 
         return result;
+    }
+
+    /**
+     * Copy all the tuples at the current position of each iterator to the tuples variable.
+     */
+    private void copyAllTuples() {
+        for (int i = 0; i < iterators.length; ++i)
+            tuples[i] = iterators[i].value();
     }
 
     /**
@@ -71,8 +82,10 @@ public class AggOne implements AggAlgorithm {
                  */
                 iterators[i].nextInBlock();
                 returnPositions[i]++;
-                for (int j = 0; j < i; ++j)
+                for (int j = 0; j < i; ++j) {
                     rewind(j);
+                    tuples[j] = iterators[j].value();
+                }
                 return;
             }
         }
@@ -84,6 +97,7 @@ public class AggOne implements AggAlgorithm {
         for (int i = 0; i < iterators.length; ++i)
             rewind(i);
         leapfrogTriejoin.overallNext();
+        copyAllTuples();
     }
 
     /**
@@ -98,10 +112,9 @@ public class AggOne implements AggAlgorithm {
     /**
      * Calculate a product from a set of result tuples of the join.
      * @param instruction a four-tuple of relation and position in the relation for two attributes we wish to multiply
-     * @param tuples the result to tuples to look in
      * @return the result of the multiplication
      */
-    private long calculateFromInstruction(int[] instruction, long[][] tuples) {
+    private long calculateFromInstruction(int[] instruction) {
         return tuples[instruction[0]][instruction[1]] * tuples[instruction[2]][instruction[3]];
     }
 }

@@ -15,9 +15,7 @@ import java.util.stream.Collectors;
  * Provides methods for iterating over the overall join result.
  */
 public class LeapfrogTriejoin {
-    private final Iterator[] iterators;
     private final UnaryLeapfrogTriejoin[] unaryLeapfrogTriejoins;
-    private final long[][] resultTuple;
     private boolean overallAtEnd = false;
     private int depth = -1;
 
@@ -30,26 +28,12 @@ public class LeapfrogTriejoin {
      *                       others in the same list
      */
     public LeapfrogTriejoin(Iterator[] iterators, List<List<int[]>> joinConditions) {
-        this.iterators = iterators;
-        resultTuple = new long[iterators.length][];
         unaryLeapfrogTriejoins = joinConditions.stream().map(joinInstruction -> {
                 List<Iterator> usedIterators = new ArrayList<>(joinInstruction.size());
                 usedIterators.addAll(joinInstruction.stream().map(position -> iterators[position[0]]).collect(Collectors.toList()));
                 return new UnaryLeapfrogTriejoin(usedIterators);
             }).collect(Collectors.toList()).toArray(new UnaryLeapfrogTriejoin[0]);
         findNext(false);
-    }
-
-    /**
-     * Get the tuples at the current position in each of the iterators.
-     * Notice to avoid allocating and deallocating memory we re-use the same tuple each call, so previous tuples
-     * should not be used after this method has been called again.
-     * @return the tuples at the current position in each iterator
-     */
-    public long[][] resultTuple() {
-        for (int i = 0; i < iterators.length; ++i)
-            resultTuple[i] = iterators[i].value();
-        return resultTuple;
     }
 
     /**
