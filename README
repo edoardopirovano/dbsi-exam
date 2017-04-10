@@ -3,16 +3,18 @@ To run the code, first ensure you have suitable versions of the Java Runtime Env
     javac -version
 And checking that the two version numbers are the same and at least 1.8 (this is the case on the lab machines).
 
-Now, make sure the lib directory, and wherever you will build the code are included in your CLASSPATH environment variable.
-This can be achieved by running the command (from the directory containing this file):
-    CLASSPATH=$(pwd)/lib:$(pwd)/build:$CLASSPATH
+Add the SQLite driver to the CLASSPATH environment variable by running the command (from the directory containing this file):
+    CLASSPATH=$(pwd)/lib/sqlite-jdbc-3.16.1.jar:$CLASSPATH
 
 Then, make the build directory and compile all classes into it by running:
     mkdir -p build
     javac $(find src -name "*.java") -d build
 
-Finally, run the benchmarker (which will run all three solutions in turn) with 8GB of memory by executing:
-    java -Xmx8G org.candidate697229.benchmarking.Benchmarker
+Add this to the CLASSPATH environment variable by running:
+    CLASSPATH=$(pwd)/build:$CLASSPATH
+
+Finally, run the benchmarker (which will run all three solutions in turn) with 4GB of memory by executing:
+    java -Xmx4G org.candidate697229.benchmarking.Benchmarker
 
 As provided, the code will timeout after 15 minutes for each solution, which will likely only give the final solution enough time to complete with every scale factor.
 The TIMEOUT_SECONDS constant in Configuration.java can be changed to vary this timeout.
