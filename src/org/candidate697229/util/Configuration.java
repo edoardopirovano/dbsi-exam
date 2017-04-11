@@ -13,7 +13,7 @@ public class Configuration {
     /**
      * Set to true to output the query results for each run rather than just the timing results.
      */
-    public static final boolean OUTPUT_RESULTS = true;
+    public static final boolean OUTPUT_RESULTS = false;
 
     /**
      * Number of scale factors to run timing experiments on (20 will run all of them). This is ignored if we are using

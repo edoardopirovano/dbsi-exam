@@ -11,7 +11,7 @@ import static org.candidate697229.util.Configuration.USE_TEST_DATABASE;
  * Implementation of aggregation with the first improvement.
  */
 public class AggOne implements AggAlgorithm {
-    private final int[][] distinctPairs;
+    private final int[][] attributePairs;
     private final LeapfrogTriejoin leapfrogTriejoin;
     private final Iterator[] iterators;
     private int[] returnPositions;
@@ -23,7 +23,7 @@ public class AggOne implements AggAlgorithm {
      */
     public AggOne(int scaleFactor) {
         Database database = Database.makeFromDirectory(USE_TEST_DATABASE ? "test-table" : "housing/housing-" + scaleFactor);
-        distinctPairs = database.getAllPairsOfAttributes().toArray(new int[0][]);
+        attributePairs = database.getAllPairsOfAttributes().toArray(new int[0][]);
         iterators = new Iterator[database.getRelations().size()];
         for (int i = 0; i < database.getRelations().size(); ++i)
             iterators[i] = new SequentialIterator(database.getRelations().get(i).getTuples());
@@ -34,13 +34,13 @@ public class AggOne implements AggAlgorithm {
 
     @Override
     public long[] computeAllAggregatesOfNaturalJoin() {
-        long[] result = new long[distinctPairs.length];
+        long[] result = new long[attributePairs.length];
 
         copyAllTuples();
         while (!leapfrogTriejoin.overallAtEnd()) {
             int agg = 0;
-            for (int[] distinctPair : distinctPairs)
-                result[agg++] += calculateFromInstruction(distinctPair);
+            for (int[] attributePair : attributePairs)
+                result[agg++] += calculateFromInstruction(attributePair);
             advanceToNextTuple();
         }
 
@@ -53,7 +53,7 @@ public class AggOne implements AggAlgorithm {
 
         copyAllTuples();
         while (!leapfrogTriejoin.overallAtEnd()) {
-            result += calculateFromInstruction(distinctPairs[0]);
+            result += calculateFromInstruction(attributePairs[0]);
             advanceToNextTuple();
         }
 
@@ -81,9 +81,11 @@ public class AggOne implements AggAlgorithm {
                  * do this and then rewind any iterators before this to get all combinations with tuples from these.
                  */
                 iterators[i].nextInBlock();
+                tuples[i] = iterators[i].value();
                 returnPositions[i]++;
                 for (int j = 0; j < i; ++j) {
-                    rewind(j);
+                    iterators[j].back(returnPositions[j]);
+                    returnPositions[j] = 0;
                     tuples[j] = iterators[j].value();
                 }
                 return;
@@ -95,18 +97,9 @@ public class AggOne implements AggAlgorithm {
          * instead use leapfrog triejoin to jump to the next join key in the data (after rewinding all the iterators).
          */
         for (int i = 0; i < iterators.length; ++i)
-            rewind(i);
+            returnPositions[i] = 0;
         leapfrogTriejoin.overallNext();
         copyAllTuples();
-    }
-
-    /**
-     * Move iterator i back to the start of the current block of tuples with the same join keys.
-     * @param i the iterator to move back
-     */
-    private void rewind(int i) {
-        iterators[i].back(returnPositions[i]);
-        returnPositions[i] = 0;
     }
 
     /**
