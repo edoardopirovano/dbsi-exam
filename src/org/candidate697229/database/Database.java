@@ -6,7 +6,7 @@ import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.candidate697229.util.Configuration.USE_TEST_DATABASE;
+import static org.candidate697229.util.Configuration.USE_EXAMPLE_DATABASE;
 
 /**
  * Class representing a database (set of relations).
@@ -38,7 +38,7 @@ public class Database {
      * @return the database read in
      */
     public static Database makeFromDirectory(String directoryName, boolean shouldPopulate) {
-        Database database = new Database(USE_TEST_DATABASE ? testTables() : housingTables());
+        Database database = new Database(USE_EXAMPLE_DATABASE ? exampleRelations() : housingRelations());
         if (shouldPopulate)
             database.readFromDirectory(directoryName);
         return database;
@@ -48,7 +48,7 @@ public class Database {
      * Get the relations in the housing database.
      * @return the relations in the housing database (not populated with tuples)
      */
-    private static ArrayList<Relation> housingTables() {
+    private static ArrayList<Relation> housingRelations() {
         ArrayList<Relation> relations = new ArrayList<>(6);
         relations.add(new Relation("House", Arrays.asList("postcode", "area", "price", "bedrooms", "bathrooms",
                 "kitchen", "house", "flat", "condo", "garden", "parking")));
@@ -67,7 +67,7 @@ public class Database {
      * Get the relations in the test database.
      * @return the relations in the test database (not populated with tuples)
      */
-    private static ArrayList<Relation> testTables() {
+    private static ArrayList<Relation> exampleRelations() {
         ArrayList<Relation> relations = new ArrayList<>(4);
         relations.add(new Relation("R1", Arrays.asList("A","B","C")));
         relations.add(new Relation("R2", Arrays.asList("A","B","D")));

@@ -20,12 +20,13 @@ public class Benchmarker {
      */
     public static void main(String[] args) {
         System.out.println("Creating Naive database to benchmark against");
-        for (int i = 1; i <= (USE_TEST_DATABASE ? 1 : NUM_OF_SCALES); ++i) {
-            String dbName = (USE_TEST_DATABASE ? "test-table" : "housing/housing-" + i);
+        for (int i = 1; i <= (USE_EXAMPLE_DATABASE ? 1 : NUM_OF_SCALES); ++i) {
+            String dbName = (USE_EXAMPLE_DATABASE ? "example-database" : "housing/housing-" + i);
             if (!new File(dbName + ".db").exists()) {
                 SQLiteHelper.makeSQLiteDatabase(Database.makeFromDirectory(dbName), dbName + ".db");
-                System.out.println("... Created Naive database for database number " + (USE_TEST_DATABASE ? "TEST" : i));
-            } else System.out.println("... Naive database for database number " + (USE_TEST_DATABASE ? "TEST" : i) + " already exists, skipping creation");
+                System.out.println("... Created Naive database for database number " + (USE_EXAMPLE_DATABASE ? "TEST" : i));
+            } else
+                System.out.println("... Naive database for database number " + (USE_EXAMPLE_DATABASE ? "TEST" : i) + " already exists, skipping creation");
         }
 
         List<QueryRunner> queryRunners = Arrays.asList(new NaiveRunner(), new AggOneRunner(), new AggTwoRunner());
@@ -33,7 +34,7 @@ public class Benchmarker {
         experiment:
         for (QueryRunner runner : queryRunners) {
             long experimentStart = System.currentTimeMillis();
-            for (int i = 1; i <= (USE_TEST_DATABASE ? 1 : NUM_OF_SCALES); ++i) {
+            for (int i = 1; i <= (USE_EXAMPLE_DATABASE ? 1 : NUM_OF_SCALES); ++i) {
                 GCAndWait();
                 runner.runQueryAll(i);
                 GCAndWait();

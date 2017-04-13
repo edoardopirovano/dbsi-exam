@@ -73,7 +73,7 @@ public class Relation {
     }
 
     /**
-     * Get the tuples in the relation, as a two-dimensional tuple of rows then columns
+     * Get the tuples in the relation, as a two-dimensional tuple of rows then attributes
      * @return all tuples in the relation
      */
     public long[][] getTuples() {

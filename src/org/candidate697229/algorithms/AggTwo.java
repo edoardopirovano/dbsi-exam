@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.candidate697229.util.Configuration.USE_TEST_DATABASE;
+import static org.candidate697229.util.Configuration.USE_EXAMPLE_DATABASE;
 
 /**
  * Implementation of aggregation with both improvements.
@@ -27,8 +27,8 @@ public class AggTwo implements AggAlgorithm {
      * @param scaleFactor the scaleFactor to run on
      */
     public AggTwo(int scaleFactor) {
-        Database database = Database.makeFromDirectory(USE_TEST_DATABASE ? "test-table" : "housing/housing-" + scaleFactor);
-        instructions = getInstructionsForSummedDatabase(database);
+        Database database = Database.makeFromDirectory(USE_EXAMPLE_DATABASE ? "example-database" : "housing/housing-" + scaleFactor);
+        instructions = getInstructions(database);
         numberOfJoinAttributes = new int[database.getRelations().size()];
         summedTuple = new long[database.getRelations().size()][];
         iterators = new Iterator[database.getRelations().size()];
@@ -169,7 +169,7 @@ public class AggTwo implements AggAlgorithm {
      * @return a list of instructions
      *          (for a description of the form these instructions take, see the calculateFromInstruction method above)
      */
-    private List<int[]> getInstructionsForSummedDatabase(Database database) {
+    private List<int[]> getInstructions(Database database) {
         List<int[]> distinctPairs = database.getAllPairsOfAttributes();
         List<int[]> instructions = new ArrayList<>();
 

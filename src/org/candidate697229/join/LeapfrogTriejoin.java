@@ -24,7 +24,7 @@ public class LeapfrogTriejoin {
      *
      * @param iterators      the iterators for the data we wish to join on
      * @param joinConditions the conditions for the join, these should be a list of list of pairs, with each pair
-     *                       representing a table and attribute within that table that we wish to be equal to all
+     *                       representing a relation and attribute within that relation that we wish to be equal to all
      *                       others in the same list
      */
     public LeapfrogTriejoin(Iterator[] iterators, List<List<int[]>> joinConditions) {

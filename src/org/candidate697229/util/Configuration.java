@@ -5,10 +5,10 @@ package org.candidate697229.util;
  */
 public class Configuration {
     /**
-     * Set to true to use the test database, which consists of the example relations from the question paper with the
+     * Set to true to use the example database, which consists of the example relations from the question paper with the
      * test data used as an example in question one. Set to false to use the housing databases from the course web page.
      */
-    public static final boolean USE_TEST_DATABASE = false;
+    public static final boolean USE_EXAMPLE_DATABASE = false;
 
     /**
      * Set to true to output the query results for each run rather than just the timing results.
@@ -17,7 +17,7 @@ public class Configuration {
 
     /**
      * Number of scale factors to run timing experiments on (20 will run all of them). This is ignored if we are using
-     * the test database (ie. if USE_TEST_DATABASE is true).
+     * the example database (ie. if USE_EXAMPLE_DATABASE is true).
      */
     public static final int NUM_OF_SCALES = 20;
 

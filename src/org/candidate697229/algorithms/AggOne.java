@@ -5,7 +5,7 @@ import org.candidate697229.join.LeapfrogTriejoin;
 import org.candidate697229.structures.Iterator;
 import org.candidate697229.structures.SequentialIterator;
 
-import static org.candidate697229.util.Configuration.USE_TEST_DATABASE;
+import static org.candidate697229.util.Configuration.USE_EXAMPLE_DATABASE;
 
 /**
  * Implementation of aggregation with the first improvement.
@@ -22,7 +22,7 @@ public class AggOne implements AggAlgorithm {
      * @param scaleFactor the scaleFactor to run on
      */
     public AggOne(int scaleFactor) {
-        Database database = Database.makeFromDirectory(USE_TEST_DATABASE ? "test-table" : "housing/housing-" + scaleFactor);
+        Database database = Database.makeFromDirectory(USE_EXAMPLE_DATABASE ? "example-database" : "housing/housing-" + scaleFactor);
         attributePairs = database.getAllPairsOfAttributes().toArray(new int[0][]);
         iterators = new Iterator[database.getRelations().size()];
         for (int i = 0; i < database.getRelations().size(); ++i)
